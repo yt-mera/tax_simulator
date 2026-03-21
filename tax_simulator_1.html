@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>給与＋個人事業 税額シミュレーター</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#09090f;--card:#111118;--border:#252530;
+  --blue:#60a5fa;--green:#4ade80;--orange:#fb923c;--red:#f87171;
+  --yellow:#fbbf24;--purple:#c084fc;--teal:#2dd4bf;--cyan:#22d3ee;
+  --muted:#6b7280;--text:#d1d5db;--white:#f9fafb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP','Hiragino Sans',sans-serif;min-height:100vh;font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px}
+.hdr{margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.hdr-tag{font-size:10px;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:6px}
+.hdr-title{font-size:22px;font-weight:900;color:var(--white);margin-bottom:4px}
+.hdr-sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+.badge{display:inline-block;background:#1e3a5f;border:1px solid var(--blue);color:var(--blue);font-size:10px;padding:2px 10px;border-radius:20px;margin:2px 4px 2px 0}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:14px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+.ctitle{font-size:10px;letter-spacing:3px;color:var(--cyan);text-transform:uppercase;margin-bottom:12px;font-weight:700}
+/* dynamic info box */
+.bl{background:#111827;border:1px solid #1f2937;border-radius:7px;padding:10px 13px;margin-bottom:10px}
+.blt{font-size:9px;letter-spacing:3px;color:#4b5563;text-transform:uppercase;margin-bottom:7px}
+.blr{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #1a2332;color:var(--muted)}
+.blr:last-child{border:none;font-weight:700;font-size:12px;color:var(--white);padding-top:6px}
+.blr span:last-child{color:var(--white);font-variant-numeric:tabular-nums}
+.blr.dyn span:last-child{color:var(--cyan)}
+/* sliders */
+.sr{margin-bottom:14px}
+.sl{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:5px}
+.sv{font-weight:700;font-size:13px;color:var(--white)}
+.sn{font-size:10px;color:#4b5563;margin-top:3px;line-height:1.5}
+input[type=range]{width:100%;cursor:pointer;height:4px;border-radius:2px}
+/* number input */
+.ni{width:88px;background:#0a0a12;border:1px solid var(--border);border-radius:6px;
+  color:var(--white);font-size:12px;font-weight:700;padding:3px 7px;text-align:right;
+  font-variant-numeric:tabular-nums;transition:border-color .15s}
+.ni:focus{outline:none;border-color:var(--blue)}
+.ni::-webkit-inner-spin-button,.ni::-webkit-outer-spin-button{opacity:.4}
+.sl-wrap{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.sl-lbl{flex:1;font-size:12px;color:var(--muted)}
+.sl-unit{font-size:11px;color:var(--muted)}
+/* toggles */
+.tgr{display:flex;gap:5px;margin-bottom:12px}
+.tgb{flex:1;padding:5px 2px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .15s}
+.tgb.on{background:#1d4ed833;border-color:var(--blue);color:var(--blue)}
+/* kpis */
+.kg4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.kg3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+@media(max-width:760px){.kg4,.kg3{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:#0a0a12;border:1px solid var(--border);border-radius:8px;padding:11px 13px}
+.kl{font-size:10px;color:var(--muted);margin-bottom:2px}
+.kv{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.ks{font-size:10px;color:#4b5563;margin-top:2px}
+/* threshold badges */
+.tbr{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;min-height:24px}
+.tb{font-size:11px;padding:3px 11px;border-radius:20px;font-weight:700;border:1px solid}
+.tg{background:#052e16;border-color:#166534;color:var(--green)}
+.ty{background:#1c1407;border-color:#854d0e;color:var(--yellow)}
+.tr{background:#2d0707;border-color:#991b1b;color:var(--red)}
+.tb2{background:#0c1a3a;border-color:#1d4ed8;color:var(--blue)}
+/* alerts */
+.ab{background:#2d1507;border:1px solid #92400e;border-radius:8px;padding:9px 13px;font-size:12px;color:#fcd34d;margin-bottom:10px;display:none}
+.ab.show{display:block}
+/* formula */
+.fm{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:9px 13px;background:#0a0a12;border:1px solid var(--border);border-radius:8px;margin-bottom:10px}
+.fm b{color:var(--white)}.fm .eq{color:var(--yellow);font-weight:700}
+/* compare table */
+.cmp-tbl{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ch{padding:8px 12px;font-size:10px;font-weight:700;border-bottom:1px solid var(--border)}
+.cl{padding:7px 12px;font-size:12px;color:var(--muted);background:#0a0a12;border-bottom:1px solid var(--border)}
+.cr{padding:7px 12px;font-size:13px;font-weight:600;text-align:right;background:#0a0a12;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.cl.foot{font-weight:700;color:var(--white);background:#111827}
+.cr.foot{font-weight:700;background:#0d1a0d}
+/* tabs */
+.tabr{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.tabb{padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .15s}
+.tabb.on{background:#1d4ed8;border-color:var(--blue);color:#fff}
+.pane{display:none}.pane.show{display:block}
+/* diff chip */
+.dc{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700;margin-left:5px}
+.du{background:#2d0707;color:var(--red)}.dd{background:#052e16;color:var(--green)}
+canvas{max-height:320px}
+footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div class="hdr-tag">Japan Tax Simulator · サラリーマン ✕ 個人事業主</div>
+  <div class="hdr-title">給与＋個人事業 税額シミュレーター</div>
+  <div class="hdr-sub">給与収入・事業売上・経費率・各種控除を自由に設定。税額・手取り・法人化判定をリアルタイムで試算</div>
+  <span class="badge">社会保険料：給与連動（自動計算）</span>
+  <span class="badge">給与所得控除：自動計算</span>
+  <span class="badge">事業売上：最大1億円</span>
+  <span class="badge">法人化シミュレーション付き</span>
+</div>
+
+<div class="layout">
+<!-- ===== 左パネル ===== -->
+<div>
+  <!-- 給与パラメーター -->
+  <div class="card">
+    <div class="ctitle">💼 給与パラメーター</div>
+    <div class="sr">
+      <div class="sl-wrap">
+        <span class="sl-lbl">給与収入（額面）</span>
+        <input type="number" class="ni" id="ni_salary" min="200" max="30000" step="10" value="500"
+          oninput="syncFromInput('salary',this,10000)" onchange="syncFromInput('salary',this,10000)">
+        <span class="sl-unit">万円</span>
+      </div>
+      <input type="range" id="salary" min="2000000" max="30000000" step="100000" value="5000000"
+        oninput="syncFromSlider('salary','ni_salary',10000);update()" style="accent-color:#60a5fa">
+      <div class="sn" id="n_sal"></div>
+    </div>
+
+    <!-- 動的表示ボックス -->
+    <div class="bl">
+      <div class="blt">給与側（連動計算）</div>
+      <div class="blr dyn"><span>給与収入</span><span id="d_sal_rev"></span></div>
+      <div class="blr dyn"><span>給与所得控除</span><span id="d_sal_ded"></span></div>
+      <div class="blr dyn"><span>給与所得</span><span id="d_sal_inc"></span></div>
+      <div class="blr dyn"><span>社会保険料（自動計算）</span><span id="d_si"></span></div>
+    </div>
+
+    <!-- 可変控除スライダー -->
+    <div class="bl">
+      <div class="blt">節税コントロール控除（可変）</div>
+
+      <div class="sr" style="margin-bottom:10px">
+        <div class="sl-wrap" style="margin-bottom:4px">
+          <span class="sl-lbl">🏥 医療費（実支払額）</span>
+          <input type="number" class="ni" id="ni_med_exp" min="0" max="100" step="1" value="0"
+            oninput="syncFromInput('med_exp',this,10000)" onchange="syncFromInput('med_exp',this,10000)">
+          <span class="sl-unit">万円</span>
+        </div>
+        <input type="range" id="med_exp" min="0" max="1000000" step="5000" value="0"
+          oninput="syncFromSlider('med_exp','ni_med_exp',10000);update()" style="accent-color:#f87171">
+        <div class="sn" id="n_med">控除額 = 支払額 ー 10万円（所得5%以下の場合）</div>
+      </div>
+
+      <div class="sr" style="margin-bottom:4px">
+        <div style="font-size:11px;color:#a78bfa;font-weight:700;margin-bottom:6px">🔖 生命保険料控除（3区分・各上限4万・合計最大12万）</div>
+
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span class="sl-lbl" style="font-size:11px">一般生命保険料</span>
+          <input type="number" class="ni" id="ni_life_gen" min="0" max="40" step="0.1" value="0"
+            oninput="syncFromInput('life_gen',this,10000)" onchange="syncFromInput('life_gen',this,10000)">
+          <span class="sl-unit">万円</span>
+        </div>
+        <input type="range" id="life_gen" min="0" max="400000" step="5000" value="0"
+          oninput="syncFromSlider('life_gen','ni_life_gen',10000);update()" style="accent-color:#a78bfa;margin-bottom:6px">
+
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span class="sl-lbl" style="font-size:11px">介護医療保険料</span>
+          <input type="number" class="ni" id="ni_life_care" min="0" max="40" step="0.1" value="0"
+            oninput="syncFromInput('life_care',this,10000)" onchange="syncFromInput('life_care',this,10000)">
+          <span class="sl-unit">万円</span>
+        </div>
+        <input type="range" id="life_care" min="0" max="400000" step="5000" value="0"
+          oninput="syncFromSlider('life_care','ni_life_care',10000);update()" style="accent-color:#c084fc;margin-bottom:6px">
+
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span class="sl-lbl" style="font-size:11px">個人年金保険料</span>
+          <input type="number" class="ni" id="ni_life_pen" min="0" max="40" step="0.1" value="0"
+            oninput="syncFromInput('life_pen',this,10000)" onchange="syncFromInput('life_pen',this,10000)">
+          <span class="sl-unit">万円</span>
+        </div>
+        <input type="range" id="life_pen" min="0" max="400000" step="5000" value="0"
+          oninput="syncFromSlider('life_pen','ni_life_pen',10000);update()" style="accent-color:#e879f9">
+        <div class="sn" id="n_life">各区分：≦2万→全額、〜4万→×½+1万、〜8万→×¼+2万、超→4万（新契約）</div>
+      </div>
+
+      <div class="sr" style="margin-bottom:6px">
+        <div class="sl-wrap" style="margin-bottom:4px">
+          <span class="sl-lbl">🎁 ふるさと納税（寄附額）</span>
+          <input type="number" class="ni" id="ni_furusato" min="0" max="100" step="0.1" value="0"
+            oninput="syncFromInput('furusato',this,10000)" onchange="syncFromInput('furusato',this,10000)">
+          <span class="sl-unit">万円</span>
+        </div>
+        <input type="range" id="furusato" min="0" max="1000000" step="1000" value="0"
+          oninput="syncFromSlider('furusato','ni_furusato',10000);update()" style="accent-color:#34d399">
+        <div class="sn" id="n_furusato">控除額 = 寄附額 ー 2,000円　※ワンストップ特例は住民税のみ・確定申告は所得税にも適用</div>
+      </div>
+
+      <div style="border-top:1px solid #1a2332;padding-top:7px;margin-top:4px">
+        <div class="blr"><span>医療費控除額</span><span id="d_med_ded" style="color:var(--cyan)"></span></div>
+        <div class="blr"><span>　一般生命保険料控除</span><span id="d_life_gen_ded" style="color:var(--cyan)"></span></div>
+        <div class="blr"><span>　介護医療保険料控除</span><span id="d_life_care_ded" style="color:var(--cyan)"></span></div>
+        <div class="blr"><span>　個人年金保険料控除</span><span id="d_life_pen_ded" style="color:var(--cyan)"></span></div>
+        <div class="blr"><span>生命保険料控除 合計</span><span id="d_life_ded" style="color:var(--cyan)"></span></div>
+        <div class="blr"><span>寄附金控除額（ふるさと納税）</span><span id="d_furusato_ded" style="color:var(--cyan)"></span></div>
+        <div class="blr"><span>基礎控除（R7固定）</span><span style="color:var(--muted)">630,000円</span></div>
+        <div class="blr"><span>可変控除 小計</span><span id="d_other_ded" style="color:var(--yellow);font-weight:700"></span></div>
+      </div>
+    </div>
+
+    <div class="bl">
+      <div class="blt">給与のみ時の税額（参照）</div>
+      <div class="blr dyn"><span>課税所得</span><span id="d_sal_ti"></span></div>
+      <div class="blr dyn"><span>所得税＋復興税</span><span id="d_sal_it"></span></div>
+      <div class="blr dyn"><span>住民税</span><span id="d_sal_rt"></span></div>
+      <div class="blr dyn"><span>合計税額</span><span id="d_sal_tt"></span></div>
+    </div>
+  </div>
+
+  <!-- 事業パラメーター -->
+  <div class="card">
+    <div class="ctitle">⚙️ 事業パラメーター</div>
+    <div class="sr">
+      <div class="sl-wrap">
+        <span class="sl-lbl">事業売上</span>
+        <input type="number" class="ni" id="ni_biz_rev" min="0" max="10000" step="10" value="0"
+          oninput="syncFromInput('biz_rev',this,10000)" onchange="syncFromInput('biz_rev',this,10000)">
+        <span class="sl-unit">万円</span>
+      </div>
+      <input type="range" id="biz_rev" min="0" max="100000000" step="500000" value="0"
+        oninput="syncFromSlider('biz_rev','ni_biz_rev',10000);update()" style="accent-color:#4ade80">
+      <div class="sn" id="n_rev"></div>
+    </div>
+    <div class="sr">
+      <div class="sl-wrap">
+        <span class="sl-lbl">経費率（必要経費÷売上）</span>
+        <input type="number" class="ni" id="ni_exp_rate" min="0" max="99" step="1" value="79"
+          oninput="syncFromInput('exp_rate',this,1)" onchange="syncFromInput('exp_rate',this,1)">
+        <span class="sl-unit">%</span>
+      </div>
+      <input type="range" id="exp_rate" min="0" max="99" step="1" value="79"
+        oninput="syncFromSlider('exp_rate','ni_exp_rate',1);update()" style="accent-color:#fb923c">
+      <div class="sn" id="n_exp"></div>
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);margin-bottom:7px">青色申告控除</div>
+    <div class="tgr">
+      <button class="tgb on" id="bl65" onclick="setBlue(65)">65万（e-Tax）</button>
+      <button class="tgb"    id="bl10" onclick="setBlue(10)">10万円</button>
+      <button class="tgb"    id="bl0"  onclick="setBlue(0)">白色申告</button>
+    </div>
+
+    <div style="font-size:10px;color:#4b5563">※副業バレ対策：確定申告時に住民税を「普通徴収（自分で納付）」に設定すると、副業分の住民税増加が会社に通知されません</div>
+  </div>
+
+  <!-- 法人化パラメーター -->
+  <div class="card" style="border-color:#7c3aed44">
+    <div class="ctitle" style="color:#c084fc">🏢 法人化パラメーター</div>
+    <div class="sr">
+      <div class="sl-wrap">
+        <span class="sl-lbl">役員報酬（自分への給与）</span>
+        <input type="number" class="ni" id="ni_exec_sal" min="0" max="2000" step="10" value="500"
+          oninput="syncFromInput('exec_sal',this,10000)" onchange="syncFromInput('exec_sal',this,10000)">
+        <span class="sl-unit">万円</span>
+      </div>
+      <input type="range" id="exec_sal" min="0" max="20000000" step="100000" value="5000000"
+        oninput="syncFromSlider('exec_sal','ni_exec_sal',10000);update()" style="accent-color:#c084fc">
+      <div class="sn">法人の利益 ＝ 事業利益 ー 役員報酬</div>
+    </div>
+    <div class="sr">
+      <div class="sl-wrap">
+        <span class="sl-lbl">法人維持コスト（年間）</span>
+        <input type="number" class="ni" id="ni_corp_cost" min="0" max="300" step="5" value="50"
+          oninput="syncFromInput('corp_cost',this,10000)" onchange="syncFromInput('corp_cost',this,10000)">
+        <span class="sl-unit">万円</span>
+      </div>
+      <input type="range" id="corp_cost" min="0" max="3000000" step="50000" value="500000"
+        oninput="syncFromSlider('corp_cost','ni_corp_cost',10000);update()" style="accent-color:#a78bfa">
+      <div class="sn">税理士費用・登記・均等割など（概算）</div>
+    </div>
+    <div style="background:#1a0f2e;border:1px solid #4c1d95;border-radius:6px;padding:8px 12px;font-size:10px;color:#a78bfa;line-height:1.7">
+      📌 法人化のメリット：役員報酬に給与所得控除が適用される / 利益を翌期に繰り越せる / 経費の幅が広がる<br>
+      📌 法人化のデメリット：維持コスト・社会保険強制加入・赤字でも均等割7万円
+    </div>
+  </div>
+</div>
+
+<!-- ===== 右パネル ===== -->
+<div>
+  <div class="ab" id="ab_shohi">⚠️ <strong>消費税に注意：</strong>事業売上が1,000万円を超えると、2年後から消費税課税事業者になります。</div>
+  <div class="ab" id="ab_jigyo">📌 <strong>個人事業税が発生：</strong>事業所得が290万円を超えると個人事業税（5%）が課税されます。</div>
+
+  <div class="tbr" id="tbr"></div>
+
+  <!-- ★ 手取りサマリー（最上段・最重要） -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+    <div class="kpi" style="border-color:#1d4ed8">
+      <div class="kl" style="color:var(--blue)">💰 給与手取り</div>
+      <div class="kv" id="k_th_sal" style="color:var(--blue);font-size:22px"></div>
+      <div class="ks" id="k_th_sal_s">給与収入 ー 社保 ー 所得税 ー 住民税</div>
+    </div>
+    <div class="kpi" style="border-color:#0d9488">
+      <div class="kl" style="color:var(--teal)">💼 事業手取り</div>
+      <div class="kv" id="k_th_biz" style="color:var(--teal);font-size:22px"></div>
+      <div class="ks" id="k_th_biz_s">事業利益 ー 追加税負担</div>
+    </div>
+    <div class="kpi" style="border-color:#166534;background:#0a120a">
+      <div class="kl" style="color:var(--green)">🏆 総手取り合計</div>
+      <div class="kv" id="k_th_total" style="color:var(--green);font-size:22px"></div>
+      <div class="ks" id="k_th_diff">給与手取り ＋ 事業手取り</div>
+    </div>
+  </div>
+
+  <!-- KPI群 -->
+  <div class="kg3">
+    <div class="kpi"><div class="kl">事業利益（経費控除後）</div><div class="kv" id="k_profit" style="color:var(--green)"></div><div class="ks" id="k_profit_s"></div></div>
+    <div class="kpi"><div class="kl">給与のみ比　追加税負担</div><div class="kv" id="k_add"></div><div class="ks" id="k_add_s"></div></div>
+    <div class="kpi"><div class="kl">事業の実効税率</div><div class="kv" id="k_eff" style="color:var(--yellow)"></div><div class="ks" id="k_mg_s"></div></div>
+  </div>
+  <div class="kg3">
+    <div class="kpi"><div class="kl">課税所得</div><div class="kv" id="k_ti" style="color:var(--orange)"></div><div class="ks" id="k_ti_s"></div></div>
+    <div class="kpi"><div class="kl">所得税＋復興税</div><div class="kv" id="k_it" style="color:var(--red)"></div><div class="ks" id="k_it_s"></div></div>
+    <div class="kpi"><div class="kl">住民税（所得割）</div><div class="kv" id="k_rt" style="color:var(--orange)"></div><div class="ks" id="k_rt_s"></div></div>
+  </div>
+  <div class="kg3">
+    <div class="kpi"><div class="kl">個人事業税</div><div class="kv" id="k_bt"></div><div class="ks">事業所得290万超から5%</div></div>
+    <div class="kpi" style="grid-column:span 2"><div class="kl">合計税額（給与＋事業）</div><div class="kv" id="k_tt" style="color:var(--red)"></div><div class="ks" id="k_tt_s"></div></div>
+  </div>
+
+  <!-- 計算式バー -->
+  <div class="fm" id="fm"></div>
+
+  <!-- ===== 比較パネル ===== -->
+  <div class="card" style="padding:14px 18px;margin-bottom:12px">
+    <div class="ctitle">⚖️ 給与のみ vs 給与＋事業　比較</div>
+    <div class="cmp-tbl">
+      <div class="ch" style="background:#0a0a12;color:var(--muted)">項目</div>
+      <div class="ch" style="background:#0c1a3a;color:var(--blue);text-align:right">給与所得のみ</div>
+      <div class="ch" style="background:#0a1a0a;color:var(--green);text-align:right">給与＋事業</div>
+
+      <div class="cl">課税所得</div>
+      <div class="cr" style="color:var(--blue)"  id="c_ti_sal"></div>
+      <div class="cr" style="color:var(--orange)" id="c_ti_biz"></div>
+
+      <div class="cl">所得税＋復興税</div>
+      <div class="cr" style="color:var(--blue)"  id="c_it_sal"></div>
+      <div class="cr" style="color:var(--red)"   id="c_it_biz"></div>
+
+      <div class="cl">住民税（所得割）</div>
+      <div class="cr" style="color:var(--blue)"   id="c_rt_sal"></div>
+      <div class="cr" style="color:var(--orange)" id="c_rt_biz"></div>
+
+      <div class="cl">個人事業税</div>
+      <div class="cr" style="color:var(--muted)">非課税</div>
+      <div class="cr" id="c_bt_biz"></div>
+
+      <div class="cl foot">合計税額</div>
+      <div class="cr foot" style="color:var(--blue)"  id="c_tt_sal"></div>
+      <div class="cr foot" style="color:var(--red)"   id="c_tt_biz"></div>
+
+      <div class="cl foot" style="color:var(--green);background:#071207">★ 手取り合計</div>
+      <div class="cr foot" style="color:var(--blue);background:#070c1a"  id="c_th_sal"></div>
+      <div class="cr foot" style="color:var(--green);background:#071207" id="c_th_biz"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+      <div class="kpi"><div class="kl">事業による増税額</div><div class="kv" id="c_diff_tax"></div><div class="ks">給与のみとの差額</div></div>
+      <div class="kpi"><div class="kl">事業利益の手取り率</div><div class="kv" id="c_keep_rate" style="color:var(--teal)"></div><div class="ks" id="c_keep_abs"></div></div>
+      <div class="kpi"><div class="kl">事業利益に対する税負担率</div><div class="kv" id="c_burden_rate" style="color:var(--yellow)"></div><div class="ks">追加税÷事業利益</div></div>
+    </div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tabr">
+    <button class="tabb on" onclick="switchTab('compare',this)">給与のみ vs 給与+事業</button>
+    <button class="tabb"    onclick="switchTab('profit',this)">利益別・税額分析</button>
+    <button class="tabb"    onclick="switchTab('expense',this)">経費率の影響</button>
+    <button class="tabb"    onclick="switchTab('rev',this)">売上別シミュレーション</button>
+    <button class="tabb"    onclick="switchTab('margin',this)">限界分析</button>
+    <button class="tabb"    onclick="switchTab('corp',this)" style="border-color:#7c3aed;color:#c084fc">🏢 法人化分析</button>
+  </div>
+
+  <div class="card" style="padding:14px 16px">
+    <div class="pane show" id="pane_compare"><canvas id="chart_compare"></canvas></div>
+    <div class="pane"      id="pane_profit"><canvas id="chart_profit"></canvas></div>
+    <div class="pane"      id="pane_expense"><canvas id="chart_expense"></canvas></div>
+    <div class="pane"      id="pane_rev"><canvas id="chart_rev"></canvas></div>
+    <div class="pane"      id="pane_margin"><canvas id="chart_margin"></canvas></div>
+
+    <!-- 法人化分析パネル -->
+    <div class="pane" id="pane_corp">
+      <!-- 法人化 KPI比較 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div style="background:#0a0a12;border:1px solid #1d4ed8;border-radius:8px;padding:12px 14px">
+          <div style="font-size:10px;color:var(--blue);margin-bottom:6px;font-weight:700">👤 個人事業主（現状）</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><div style="font-size:10px;color:var(--muted)">事業税負担合計</div><div style="font-size:16px;font-weight:800;color:var(--red)" id="cp_sole_tax"></div></div>
+            <div><div style="font-size:10px;color:var(--muted)">総手取り</div><div style="font-size:16px;font-weight:800;color:var(--green)" id="cp_sole_take"></div></div>
+          </div>
+          <div style="font-size:10px;color:#4b5563;margin-top:6px" id="cp_sole_note"></div>
+        </div>
+        <div style="background:#0a0a12;border:1px solid #7c3aed;border-radius:8px;padding:12px 14px">
+          <div style="font-size:10px;color:#c084fc;margin-bottom:6px;font-weight:700">🏢 法人化した場合</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><div style="font-size:10px;color:var(--muted)">法人税等＋個人税計</div><div style="font-size:16px;font-weight:800;color:var(--red)" id="cp_corp_tax"></div></div>
+            <div><div style="font-size:10px;color:var(--muted)">総手取り</div><div style="font-size:16px;font-weight:800;color:var(--green)" id="cp_corp_take"></div></div>
+          </div>
+          <div style="font-size:10px;color:#4b5563;margin-top:6px" id="cp_corp_note"></div>
+        </div>
+      </div>
+
+      <!-- 判定バナー -->
+      <div id="cp_verdict" style="border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center"></div>
+
+      <!-- 法人税内訳 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+        <div class="kpi"><div class="kl">法人所得</div><div class="kv" id="cp_corp_income" style="font-size:15px;color:var(--orange)"></div><div class="ks">事業利益ー役員報酬ー社保会社負担</div></div>
+        <div class="kpi"><div class="kl">法人税等合計</div><div class="kv" id="cp_corp_tax_detail" style="font-size:15px;color:var(--red)"></div><div class="ks" id="cp_corp_rate"></div></div>
+        <div class="kpi"><div class="kl">役員報酬の個人税</div><div class="kv" id="cp_exec_tax" style="font-size:15px;color:var(--orange)"></div><div class="ks">所得税＋住民税</div></div>
+        <div class="kpi"><div class="kl">社保 会社負担分</div><div class="kv" id="cp_si_corp" style="font-size:15px;color:var(--purple)"></div><div class="ks">役員報酬ベース・法人コスト</div></div>
+      </div>
+
+      <!-- サブタブ -->
+      <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="tgb on" id="cst_breakeven" onclick="setCst('breakeven',this)">損益分岐ライン</button>
+        <button class="tgb"    id="cst_salary"    onclick="setCst('salary',this)">役員報酬 最適化</button>
+        <button class="tgb"    id="cst_compare"   onclick="setCst('compare',this)">個人 vs 法人 比較</button>
+      </div>
+      <canvas id="chart_corp" style="max-height:280px"></canvas>
+      <div style="font-size:10px;color:#4b5563;margin-top:8px;line-height:1.7" id="cp_desc"></div>
+    </div>
+  </div>
+
+  <footer>
+    ⚠️ 概算シミュレーションです。社会保険料は協会けんぽ東京・40歳未満の標準報酬月額ベースで自動計算。
+    住民税は課税所得×10%（均等割除く）に住民税特例控除を適用。個人事業税は第5種事業（卸売）5%。復興特別所得税（×2.1%）含む。
+    ふるさと納税は所得税控除＋住民税特例控除を計算（確定申告利用前提）。医療費控除はmin(総所得×5%, 10万円)を閾値として計算。
+    生命保険料控除は新契約・3区分対応（一般・介護医療・個人年金、各上限4万・合計最大12万）。
+    法人化時の社保は労使折半・会社負担分を法人コストに計上。実際の申告は税理士にご確認ください。
+  </footer>
+</div>
+</div><!-- /layout -->
+</div><!-- /wrap -->
+
+<script>
+// ══════════════════════════════════════════════
+//  可変控除の計算
+// ══════════════════════════════════════════════
+var BASIC_DED = 630000; // 基礎控除（R7固定）
+
+// 医療費控除：支払額 ー min(総所得金額等×5%, 10万円)
+function calcMedDed(medExp, totalIncome){
+  var threshold = Math.min(Math.floor(totalIncome * 0.05), 100000);
+  return Math.max(0, Math.min(medExp - threshold, 2000000));
+}
+
+// 生命保険料控除（新契約）1区分あたり上限4万円
+function calcLifeDedSingle(premium){
+  if(premium <= 0)      return 0;
+  if(premium <= 20000)  return premium;
+  if(premium <= 40000)  return Math.floor(premium * 0.5 + 10000);
+  if(premium <= 80000)  return Math.floor(premium * 0.25 + 20000);
+  return 40000;
+}
+
+// 生命保険料控除 3区分合計（上限12万円）
+function calcLifeDedTotal(){
+  var gen  = +document.getElementById('life_gen').value;
+  var care = +document.getElementById('life_care').value;
+  var pen  = +document.getElementById('life_pen').value;
+  return calcLifeDedSingle(gen) + calcLifeDedSingle(care) + calcLifeDedSingle(pen);
+}
+
+// ふるさと納税控除：所得税側は寄附額-2,000円を所得控除（getOtherDedに含める）
+// 住民税特例控除は別途rtから直接控除する（calc関数内で処理）
+function calcFurusatoDed(donation){
+  return Math.max(0, donation - 2000); // 所得税側の控除額
+}
+
+// ふるさと納税 住民税特例控除
+// = (寄附額-2000) × (90% - 所得税限界税率)　上限：住民税所得割の20%
+function calcFurusatoResTaxDed(donation, marginalItRate, rt){
+  if(donation <= 2000) return 0;
+  var base    = donation - 2000;
+  var special = base * (0.9 - marginalItRate);
+  var cap     = rt * 0.2;
+  return Math.max(0, Math.min(special, cap));
+}
+
+// その他控除合計（医療費は totalIncome を受け取って正しく計算）
+function getOtherDed(totalIncome){
+  var medExp  = +document.getElementById('med_exp').value;
+  var furusato= +document.getElementById('furusato').value;
+  var medDed  = calcMedDed(medExp, totalIncome);
+  var lifeDed = calcLifeDedTotal();
+  return medDed + lifeDed + calcFurusatoDed(furusato) + BASIC_DED;
+}
+
+// 所得税速算表
+var BRK = [
+  {l:1950000,  r:.05, d:0},
+  {l:3300000,  r:.10, d:97500},
+  {l:6950000,  r:.20, d:427500},
+  {l:9000000,  r:.23, d:636000},
+  {l:18000000, r:.33, d:1536000},
+  {l:40000000, r:.40, d:2796000},
+  {l:Infinity, r:.45, d:4796000},
+];
+function itax(x){
+  if(x <= 0) return 0;
+  for(var i=0;i<BRK.length;i++) if(x <= BRK[i].l) return x*BRK[i].r - BRK[i].d;
+  return x*.45 - 4796000;
+}
+function mgRate(x){
+  if(x <= 0) return .05;
+  for(var i=0;i<BRK.length;i++) if(x <= BRK[i].l) return BRK[i].r;
+  return .45;
+}
+
+// ── 給与所得控除（令和2年以降）
+function empDed(sal){
+  if(sal <= 1625000) return 550000;
+  if(sal <= 1800000) return Math.floor(sal * 0.4 - 100000);
+  if(sal <= 3600000) return Math.floor(sal * 0.3 + 80000);
+  if(sal <= 6600000) return Math.floor(sal * 0.2 + 440000);
+  if(sal <= 8500000) return Math.floor(sal * 0.1 + 1100000);
+  return 1950000;
+}
+
+// ── 社会保険料自動計算（協会けんぽ東京・40歳未満 R7）
+// 健康保険：9.98% 折半、厚生年金：18.3% 折半（上限報酬月額65万）、雇用保険：0.6%
+function calcSI(sal){
+  var monthly = sal / 12;
+  // 標準報酬月額の上下限
+  var siHealth  = Math.min(Math.max(monthly, 63000), 1390000); // 健康保険 等級1〜50
+  var siPension = Math.min(Math.max(monthly, 88000),  650000); // 厚生年金 等級1〜32
+  var health  = Math.round(siHealth  * 0.0998 / 2) * 12;
+  var pension = Math.round(siPension * 0.183  / 2) * 12;
+  var employ  = Math.round(sal * 0.006);
+  return health + pension + employ;
+}
+
+// ── メイン計算（給与＋事業）
+function calc(sal, rev, expRate, blueAmt){
+  var si      = calcSI(sal);
+  var ed      = empDed(sal);
+  var salInc  = sal - ed;
+  var exp     = Math.round(rev * expRate / 100);
+  var profit  = Math.max(0, rev - exp);
+  var blueApp = Math.min(blueAmt, profit);
+  var bizInc  = Math.max(0, profit - blueApp);
+  var totalInc= salInc + bizInc;
+  // 医療費控除の5%ルールは総所得依存→1回収束計算
+  var otherDed= getOtherDed(totalInc);
+  var totalDed= si + otherDed;
+  var taxable = Math.max(0, Math.floor((totalInc - totalDed) / 1000) * 1000);
+  var it      = itax(taxable) * 1.021;
+  var rtBase  = taxable * 0.1;
+  var furusato = +document.getElementById('furusato').value;
+  var rtSpecial= calcFurusatoResTaxDed(furusato, mgRate(taxable), rtBase);
+  var rt      = rtBase - rtSpecial;
+  var bt      = profit > 2900000 ? (profit - 2900000) * 0.05 : 0;
+  var total   = it + rt + bt;
+  return {si:si, ed:ed, salInc:salInc, exp:exp, profit:profit,
+    blueApp:blueApp, bizInc:bizInc, totalInc:totalInc, totalDed:totalDed,
+    taxable:taxable, it:it, rt:rt, rtSpecial:rtSpecial, bt:bt, total:total, mg:mgRate(taxable)};
+}
+
+// ── 給与のみ計算（事業ゼロ）
+function calcSalOnly(sal){
+  var si      = calcSI(sal);
+  var ed      = empDed(sal);
+  var salInc  = sal - ed;
+  var otherDed= getOtherDed(salInc); // 給与所得が総所得
+  var totalDed= si + otherDed;
+  var taxable = Math.max(0, Math.floor((salInc - totalDed) / 1000) * 1000);
+  var it      = itax(taxable) * 1.021;
+  var rtBase  = taxable * 0.1;
+  var furusato = +document.getElementById('furusato').value;
+  var rtSpecial= calcFurusatoResTaxDed(furusato, mgRate(taxable), rtBase);
+  var rt      = rtBase - rtSpecial;
+  return {si:si, ed:ed, salInc:salInc, totalDed:totalDed,
+    taxable:taxable, it:it, rt:rt, rtSpecial:rtSpecial, total:it+rt};
+}
+
+// ── 利益直接指定版（グラフ用）
+function calcByProfit(sal, profit, blueAmt){
+  var si      = calcSI(sal);
+  var ed      = empDed(sal);
+  var salInc  = sal - ed;
+  var ba      = Math.min(blueAmt, profit);
+  var bInc    = Math.max(0, profit - ba);
+  var totalInc= salInc + bInc;
+  var otherDed= getOtherDed(totalInc);
+  var totalDed= si + otherDed;
+  var ti      = Math.max(0, Math.floor((totalInc - totalDed) / 1000) * 1000);
+  var it      = itax(ti) * 1.021;
+  var rtBase  = ti * 0.1;
+  var furusato = +document.getElementById('furusato').value;
+  var rtSpecial= calcFurusatoResTaxDed(furusato, mgRate(ti), rtBase);
+  var rt      = rtBase - rtSpecial;
+  var bt      = profit > 2900000 ? (profit - 2900000) * 0.05 : 0;
+  var tot     = it + rt + bt;
+  return {total:tot, it:it, rt:rt, bt:bt, taxable:ti};
+}
+
+// ── 状態
+var blueAmt = 650000;
+
+// ── スライダー ↔ 数値入力 双方向同期
+function syncFromSlider(sliderId, inputId, divisor){
+  var v = +document.getElementById(sliderId).value;
+  document.getElementById(inputId).value = +(v / divisor).toFixed(divisor===1?0:2);
+}
+function syncFromInput(sliderId, inputEl, divisor){
+  var raw = parseFloat(inputEl.value) || 0;
+  var v   = Math.round(raw * divisor);
+  var slider = document.getElementById(sliderId);
+  v = Math.max(+slider.min, Math.min(+slider.max, v));
+  slider.value = v;
+  inputEl.value = +(v / divisor).toFixed(divisor===1?0:2);
+  update();
+}
+
+// ── フォーマット
+function M(n){ return Math.round(n/10000).toLocaleString()+'万'; }
+function P(n){ return (n*100).toFixed(1)+'%'; }
+function Yen(n){ return Math.round(n).toLocaleString()+'円'; }
+function diffChip(n, base){
+  var d = n - base;
+  if(Math.abs(d) < 100) return '';
+  return '<span class="dc '+(d>0?'du':'dd')+'">'+(d>0?'+':'')+M(d)+'</span>';
+}
+
+// ── Chart管理
+var charts = {};
+function dc(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+var GRID = {color:'#1f2937'};
+var TICK = {color:'#6b7280', font:{size:10, family:"'Noto Sans JP',sans-serif"}};
+function TFMT(v){ return Math.round(v/10000)+'万'; }
+
+// ══════════════════════════════════════════════
+//  メイン更新
+// ══════════════════════════════════════════════
+function update(){
+  // ── 可変控除の計算・表示（最初に実行してgetOtherDed()が正しい値を返すようにする）
+  var medExp      = +document.getElementById('med_exp').value;
+  var lifeGen     = +document.getElementById('life_gen').value;
+  var lifeCare    = +document.getElementById('life_care').value;
+  var lifePen     = +document.getElementById('life_pen').value;
+  var furusato    = +document.getElementById('furusato').value;
+  // 医療費控除の閾値：給与所得を総所得の概算として使用
+  var salEst      = +document.getElementById('salary').value;
+  var salIncEst   = salEst - empDed(salEst);
+  var medThreshold= Math.min(Math.floor(salIncEst * 0.05), 100000);
+  var medDed      = Math.max(0, Math.min(medExp - medThreshold, 2000000));
+  var lifeGenDed  = calcLifeDedSingle(lifeGen);
+  var lifeCareDed = calcLifeDedSingle(lifeCare);
+  var lifePenDed  = calcLifeDedSingle(lifePen);
+  var lifeTotalDed= lifeGenDed + lifeCareDed + lifePenDed;
+  var furusatoDed = calcFurusatoDed(furusato);
+  var otherTotal  = medDed + lifeTotalDed + furusatoDed + BASIC_DED;
+  // 数値inputとスライダーの表示を同期
+  document.getElementById('ni_med_exp').value    = +(medExp/10000).toFixed(2);
+  document.getElementById('ni_life_gen').value   = +(lifeGen/10000).toFixed(2);
+  document.getElementById('ni_life_care').value  = +(lifeCare/10000).toFixed(2);
+  document.getElementById('ni_life_pen').value   = +(lifePen/10000).toFixed(2);
+  document.getElementById('ni_furusato').value   = +(furusato/10000).toFixed(2);
+  document.getElementById('n_med').textContent =
+    '控除額 = '+Yen(medDed)+'　（閾値: min(総所得×5%, 10万)＝'+Yen(medThreshold)+'）';
+  document.getElementById('n_furusato').textContent =
+    '所得税控除 = '+Yen(furusatoDed)+'　住民税特例控除は課税所得確定後に自動計算';
+  document.getElementById('d_med_ded').textContent       = Yen(medDed);
+  document.getElementById('d_life_gen_ded').textContent  = Yen(lifeGenDed);
+  document.getElementById('d_life_care_ded').textContent = Yen(lifeCareDed);
+  document.getElementById('d_life_pen_ded').textContent  = Yen(lifePenDed);
+  document.getElementById('d_life_ded').textContent      = Yen(lifeTotalDed);
+  document.getElementById('d_furusato_ded').textContent  = Yen(furusatoDed);
+  document.getElementById('d_other_ded').textContent     = Yen(otherTotal);
+
+  var sal  = +document.getElementById('salary').value;
+  var rev  = +document.getElementById('biz_rev').value;
+  var rate = +document.getElementById('exp_rate').value;
+  // 数値inputを最新スライダー値に同期
+  document.getElementById('ni_salary').value   = +(sal/10000).toFixed(0);
+  document.getElementById('ni_biz_rev').value  = +(rev/10000).toFixed(1);
+  document.getElementById('ni_exp_rate').value = rate;
+  var rev  = +document.getElementById('biz_rev').value;
+  var rate = +document.getElementById('exp_rate').value;
+  var r    = calc(sal, rev, rate, blueAmt);
+  var s    = calcSalOnly(sal);          // 給与のみ
+  var addTax  = r.total - s.total;
+  var bizNet  = r.profit - Math.max(0, addTax);
+  var effRate = r.profit > 0 ? Math.max(0, addTax) / r.profit : 0;
+
+  // ── 手取り計算
+  // 給与手取り＝給与収入 ー 社保 ー 給与のみ時の税額（所得税+住民税）
+  var salTakeHome   = sal - r.si - s.it - s.rt;
+  // 事業手取り＝事業利益 ー 追加税負担（給与のみ比）
+  var bizTakeHome   = bizNet;
+  // 総手取り
+  var totalTakeHome = salTakeHome + bizTakeHome;
+  // 給与のみの手取り（比較用）
+  var salOnlyTakeHome = sal - s.si - s.it - s.rt;
+
+  // ── 給与スライダー表示
+  document.getElementById('n_sal').textContent =
+    '給与所得控除: △'+Yen(r.ed)+'　社会保険料（自動）: '+Yen(r.si);
+  document.getElementById('n_rev').textContent =
+    '必要経費: '+M(r.exp)+'　事業利益: '+M(r.profit)+'　青色控除適用: '+M(r.blueApp);
+  document.getElementById('n_exp').textContent =
+    '経費後利益: '+M(r.profit)+' → 青色控除後 事業所得: '+M(r.bizInc);
+
+  // ── 動的表示ボックス
+  document.getElementById('d_sal_rev').textContent = Yen(sal);
+  document.getElementById('d_sal_ded').textContent = '△'+Yen(r.ed);
+  document.getElementById('d_sal_inc').textContent = Yen(r.salInc);
+  document.getElementById('d_si').textContent      = Yen(r.si);
+  document.getElementById('d_sal_ti').textContent  = Yen(s.taxable);
+  document.getElementById('d_sal_it').textContent  = Yen(Math.round(s.it));
+  document.getElementById('d_sal_rt').textContent  = Yen(s.rt);
+  document.getElementById('d_sal_tt').textContent  = Yen(Math.round(s.total));
+
+  // ── アラート
+  document.getElementById('ab_shohi').className = 'ab'+(rev >= 10000000?' show':'');
+  document.getElementById('ab_jigyo').className = 'ab'+(r.profit > 2900000?' show':'');
+
+  // ── バッジ
+  var bs = [];
+  if(r.profit === 0)                               bs.push(['tb2','事業所得ゼロ（給与のみ）']);
+  if(r.profit > 0 && r.profit <= blueAmt)          bs.push(['tg','青色控除で事業所得ゼロ可']);
+  if(r.profit > blueAmt && r.profit < 2900000)     bs.push(['ty','事業税は非課税ゾーン']);
+  if(r.profit >= 2900000)                          bs.push(['tr','個人事業税 発生（290万超）']);
+  if(rev >= 10000000)                              bs.push(['tr','消費税 要検討（1,000万超）']);
+  if(rev > 0 && rev < 10000000)                    bs.push(['tg','消費税免税事業者']);
+  if(r.mg >= 0.20)                                 bs.push(['ty','限界税率 '+P(r.mg+0.1)+'（所得税+住民税）']);
+  document.getElementById('tbr').innerHTML = bs.map(function(b){
+    return '<span class="tb '+b[0]+'">'+b[1]+'</span>';
+  }).join('');
+
+  // ── ★ 手取りKPI（最上段）
+  document.getElementById('k_th_sal').textContent   = M(salTakeHome);
+  document.getElementById('k_th_sal_s').textContent =
+    '社保'+M(r.si)+' ＋ 税'+M(s.it+s.rt);
+  document.getElementById('k_th_biz').textContent   = M(bizTakeHome);
+  document.getElementById('k_th_biz_s').textContent =
+    r.profit > 0 ? '利益'+M(r.profit)+' ー 追加税'+M(Math.max(0,addTax)) : '事業利益ゼロ';
+  document.getElementById('k_th_total').textContent = M(totalTakeHome);
+  var thDiff = totalTakeHome - salOnlyTakeHome;
+  document.getElementById('k_th_diff').innerHTML =
+    '給与のみ手取り比 <span style="color:'+(thDiff>=0?'var(--green)':'var(--red)')+'">'+
+    (thDiff>=0?'+':'')+M(thDiff)+'</span>';
+
+  // ── KPI
+  document.getElementById('k_profit').textContent   = M(r.profit);
+  document.getElementById('k_profit_s').textContent = '売上'+M(rev)+' ー 経費'+M(r.exp);
+  var addEl = document.getElementById('k_add');
+  addEl.textContent  = (addTax>=0?'':'-') + M(Math.abs(addTax));
+  addEl.style.color  = addTax>=0?'var(--red)':'var(--green)';
+  document.getElementById('k_add_s').textContent = addTax>=0?'給与のみ比 増税':'給与のみ比 還付増';
+  document.getElementById('k_eff').textContent   = P(effRate);
+  document.getElementById('k_mg_s').textContent  = '限界税率 '+P(r.mg+0.1);
+  document.getElementById('k_ti').textContent   = M(r.taxable);
+  document.getElementById('k_ti_s').innerHTML   = diffChip(r.taxable, s.taxable)||'給与のみ: '+M(s.taxable);
+  document.getElementById('k_it').textContent   = M(r.it);
+  document.getElementById('k_it_s').innerHTML   = diffChip(r.it, s.it)||'給与のみ: '+M(s.it);
+  document.getElementById('k_rt').textContent   = M(r.rt);
+  document.getElementById('k_rt_s').innerHTML   = diffChip(r.rt, s.rt)||'給与のみ: '+M(s.rt);
+  var btEl = document.getElementById('k_bt');
+  btEl.textContent = r.bt>0?M(r.bt):'非課税';
+  btEl.style.color = r.bt>0?'var(--purple)':'var(--muted)';
+  document.getElementById('k_tt').textContent   = M(r.total);
+  document.getElementById('k_tt_s').innerHTML   = diffChip(r.total, s.total)||'給与のみ: '+M(s.total);
+
+  // ── 計算式バー
+  document.getElementById('fm').innerHTML =
+    '給与所得 <b>'+M(r.salInc)+'</b> ＋ 事業所得 <b>'+M(r.bizInc)+'</b>'
+    +' ＝ <b>'+M(r.totalInc)+'</b> ー 控除合計（社保'+M(r.si)+'＋他） <b>'+M(r.totalDed)+'</b>'
+    +' <span class="eq">＝ 課税所得 '+M(r.taxable)+'</span>';
+
+  // ── 比較パネル
+  document.getElementById('c_ti_sal').textContent = M(s.taxable);
+  document.getElementById('c_ti_biz').textContent = M(r.taxable);
+  document.getElementById('c_it_sal').textContent = M(s.it);
+  document.getElementById('c_it_biz').textContent = M(r.it);
+  document.getElementById('c_rt_sal').textContent = M(s.rt);
+  document.getElementById('c_rt_biz').textContent = M(r.rt);
+  var btBizEl = document.getElementById('c_bt_biz');
+  btBizEl.textContent = r.bt>0?M(r.bt):'非課税';
+  btBizEl.style.color = r.bt>0?'var(--purple)':'var(--muted)';
+  document.getElementById('c_tt_sal').textContent = M(s.total);
+  document.getElementById('c_tt_biz').textContent = M(r.total);
+  // 手取り行
+  document.getElementById('c_th_sal').textContent = M(salOnlyTakeHome);
+  document.getElementById('c_th_biz').textContent = M(totalTakeHome);
+  var diffEl = document.getElementById('c_diff_tax');
+  diffEl.textContent = (addTax>=0?'+':'')+M(addTax);
+  diffEl.style.color = addTax>0?'var(--red)':'var(--green)';
+  var keepRate = r.profit>0?(bizNet/r.profit):1;
+  document.getElementById('c_keep_rate').textContent = P(keepRate);
+  document.getElementById('c_keep_abs').textContent  = '利益'+M(r.profit)+' → 手取'+M(bizNet);
+  var bRate = r.profit>0?Math.max(0,addTax)/r.profit:0;
+  document.getElementById('c_burden_rate').textContent = P(bRate);
+
+  // ── アクティブグラフ再描画
+  var active = document.querySelector('.pane.show').id.replace('pane_','');
+  drawChart(active, sal, rev, rate);
+  // 法人化パネルの数値inputを最新スライダー値に同期
+  document.getElementById('ni_exec_sal').value  = +(+document.getElementById('exec_sal').value/10000).toFixed(0);
+  document.getElementById('ni_corp_cost').value = +(+document.getElementById('corp_cost').value/10000).toFixed(0);
+}
+
+// ══════════════════════════════════════════════
+//  グラフ描画
+// ══════════════════════════════════════════════
+
+// グラフ0：給与のみ vs 給与+事業 比較（棒グラフ）
+function drawCompare(sal, rev, rate){
+  dc('compare');
+  var r = calc(sal, rev, rate, blueAmt);
+  var s = calcSalOnly(sal);
+  charts.compare = new Chart(document.getElementById('chart_compare'),{
+    type:'bar',
+    data:{
+      labels:['課税所得','所得税＋復興税','住民税','個人事業税','合計税額'],
+      datasets:[
+        {label:'給与所得のみ',
+          data:[s.taxable, s.it, s.rt, 0, s.total],
+          backgroundColor:'#60a5fa28', borderColor:'#60a5fa', borderWidth:2},
+        {label:'給与＋事業',
+          data:[r.taxable, r.it, r.rt, r.bt, r.total],
+          backgroundColor:'#4ade8028', borderColor:'#4ade80', borderWidth:2},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{labels:{color:'#9ca3af',font:{size:12}}},
+        title:{display:true,
+          text:'給与のみ vs 給与＋事業（売上'+M(rev)+'、経費率'+rate+'%）',
+          color:'#6b7280',font:{size:11}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+M(c.raw);}}}
+      },
+      scales:{
+        x:{grid:GRID,ticks:TICK},
+        y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}
+      }
+    }
+  });
+}
+
+// グラフ1：利益別 税額内訳
+function drawProfit(sal, rev, rate){
+  dc('profit');
+  var maxP = Math.max(rev>0?rev:3000000, 1000000);
+  var steps = 24;
+  var labels=[], netD=[], itD=[], rtD=[], btD=[];
+  var s = calcSalOnly(sal);
+  for(var i=0;i<=steps;i++){
+    var p  = Math.round(maxP*i/steps);
+    var c  = calcByProfit(sal, p, blueAmt);
+    var add= Math.max(0, c.total-s.total);
+    var t3 = (c.it+c.rt+c.bt)||1;
+    labels.push(M(p));
+    itD.push(Math.round(add*c.it/t3));
+    rtD.push(Math.round(add*c.rt/t3));
+    btD.push(Math.round(add*c.bt/t3));
+    netD.push(Math.max(0, p-add));
+  }
+  charts.profit = new Chart(document.getElementById('chart_profit'),{
+    type:'bar',
+    data:{labels:labels, datasets:[
+      {label:'事業手取り', data:netD, backgroundColor:'#4ade8028', borderColor:'#4ade80', borderWidth:1, stack:'s'},
+      {label:'追加所得税', data:itD,  backgroundColor:'#f8717128', borderColor:'#f87171', borderWidth:1, stack:'s'},
+      {label:'追加住民税', data:rtD,  backgroundColor:'#fb923c28', borderColor:'#fb923c', borderWidth:1, stack:'s'},
+      {label:'個人事業税', data:btD,  backgroundColor:'#c084fc28', borderColor:'#c084fc', borderWidth:1, stack:'s'},
+    ]},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true,text:'事業利益別 手取りと追加税負担の内訳（給与のみ比）',color:'#6b7280',font:{size:11}}},
+      scales:{
+        x:{stacked:true,grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:9})},
+        y:{stacked:true,grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}
+      }}
+  });
+}
+
+// グラフ2：経費率の影響
+function drawExpense(sal, rev){
+  dc('expense');
+  var s = calcSalOnly(sal);
+  var rows=[];
+  for(var r=0;r<=95;r+=5){
+    var c = calc(sal, rev, r, blueAmt);
+    var add = Math.max(0, c.total-s.total);
+    rows.push({r:r, profit:c.profit, add:add, net:c.profit-add});
+  }
+  charts.expense = new Chart(document.getElementById('chart_expense'),{
+    type:'line',
+    data:{labels:rows.map(function(r){return r.r+'%';}),datasets:[
+      {label:'事業手取り', data:rows.map(function(r){return r.net;}),  borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.3, pointRadius:3},
+      {label:'追加税負担', data:rows.map(function(r){return r.add;}),  borderColor:'#f87171', fill:false, tension:.3, pointRadius:3},
+      {label:'事業利益',   data:rows.map(function(r){return r.profit;}),borderColor:'#60a5fa', borderDash:[5,5], fill:false, tension:.3, pointRadius:1},
+    ]},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true,text:'経費率0〜95%の影響（売上'+M(rev)+'、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
+      scales:{x:{grid:GRID,ticks:TICK},y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}}}
+  });
+}
+
+// グラフ3：売上別シミュレーション
+function drawRev(sal, expRate){
+  dc('rev');
+  var s = calcSalOnly(sal);
+  var revs=[0,100,200,300,500,700,1000,1500,2000,3000,4000,5000,7000,10000];
+  var rows=revs.map(function(rv){
+    var c = calc(sal, rv*10000, expRate, blueAmt);
+    var add = Math.max(0, c.total-s.total);
+    return {lbl:rv===0?'0万':rv+'万',
+      itAdd:Math.max(0,c.it-s.it), rtAdd:Math.max(0,c.rt-s.rt),
+      bt:c.bt, net:c.profit-add, eff:+(add>0&&c.profit>0?add/c.profit*100:0).toFixed(1)};
+  });
+  charts.rev = new Chart(document.getElementById('chart_rev'),{
+    type:'bar',
+    data:{labels:rows.map(function(r){return r.lbl;}),datasets:[
+      {type:'bar',  label:'追加所得税',  data:rows.map(function(r){return r.itAdd;}), backgroundColor:'#f8717128', borderColor:'#f87171', borderWidth:1, stack:'t'},
+      {type:'bar',  label:'追加住民税',  data:rows.map(function(r){return r.rtAdd;}), backgroundColor:'#fb923c28', borderColor:'#fb923c', borderWidth:1, stack:'t'},
+      {type:'bar',  label:'個人事業税',  data:rows.map(function(r){return r.bt;}),    backgroundColor:'#c084fc28', borderColor:'#c084fc', borderWidth:1, stack:'t'},
+      {type:'line', label:'事業手取り',  data:rows.map(function(r){return r.net;}),   borderColor:'#4ade80', fill:false, tension:.3, pointRadius:4, yAxisID:'y'},
+      {type:'line', label:'実効税率(%)', data:rows.map(function(r){return r.eff;}),   borderColor:'#fbbf24', borderDash:[5,5], fill:false, tension:.3, pointRadius:2, yAxisID:'y2'},
+    ]},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true,text:'売上別 税額・手取り（経費率'+expRate+'%、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
+      scales:{
+        x:{grid:GRID,ticks:TICK},
+        y:{stacked:true,grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})},
+        y2:{position:'right',grid:{display:false},min:0,max:50,ticks:Object.assign({},TICK,{callback:function(v){return v+'%';}})}
+      }}
+  });
+}
+
+// グラフ4：限界分析
+function drawMargin(sal){
+  dc('margin');
+  var s = calcSalOnly(sal);
+  var maxP=80000000, step=1000000;
+  var labels=[], margArr=[], netGain=[];
+  for(var p=0;p<maxP;p+=step){
+    var c1 = calcByProfit(sal, p, blueAmt);
+    var c2 = calcByProfit(sal, p+step, blueAmt);
+    var td = c2.total - c1.total;
+    labels.push(M(p));
+    margArr.push(+(td/step*100).toFixed(1));
+    netGain.push(step-td);
+  }
+  charts.margin = new Chart(document.getElementById('chart_margin'),{
+    type:'line',
+    data:{labels:labels,datasets:[
+      {label:'手取り増加額（円/100万円増）', data:netGain, borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.2, pointRadius:1, yAxisID:'y'},
+      {label:'限界税率（%）',               data:margArr, borderColor:'#f87171', borderDash:[4,4],            fill:false, tension:.2, pointRadius:1, yAxisID:'y2'},
+    ]},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true,text:'限界分析：利益100万円増やすと手取りはいくら増えるか（給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
+      scales:{
+        x:{grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:9}),title:{display:true,text:'事業利益',color:'#6b7280',font:{size:10}}},
+        y:{grid:GRID,ticks:TICK,title:{display:true,text:'手取り増加額（円）',color:'#6b7280',font:{size:10}}},
+        y2:{position:'right',grid:{display:false},min:0,max:80,
+          ticks:Object.assign({},TICK,{callback:function(v){return v+'%';}}),
+          title:{display:true,text:'限界税率(%)',color:'#6b7280',font:{size:10}}}
+      }}
+  });
+}
+
+function drawChart(tab, sal, rev, rate){
+  if(tab==='compare') drawCompare(sal, rev, rate);
+  if(tab==='profit')  drawProfit(sal, rev, rate);
+  if(tab==='expense') drawExpense(sal, rev);
+  if(tab==='rev')     drawRev(sal, rate);
+  if(tab==='margin')  drawMargin(sal);
+  if(tab==='corp')    drawCorp(sal, rev, rate);
+}
+
+// ══════════════════════════════════════════════
+//  法人税計算ロジック
+// ══════════════════════════════════════════════
+
+// 法人税等の計算（中小法人・東京都・R7）
+// 法人所得 = 事業利益 - 役員報酬
+// 法人税：800万以下15%、超23.2%
+// 地方法人税：法人税×10.3%
+// 法人住民税（法人税割）：法人税×10.4% + 均等割70000円
+// 法人事業税：400万以下3.5%、〜800万5.3%、超7.0%
+// 特別法人事業税：法人事業税×37%
+function calcCorpTax(corpIncome){
+  if(corpIncome <= 0) return {corpTax:0, localTax:0, inhabTax:70000, bizTax:0, specialBizTax:0, total:70000, rate:0};
+  // 法人税
+  var ct = corpIncome <= 8000000
+    ? corpIncome * 0.15
+    : 8000000 * 0.15 + (corpIncome - 8000000) * 0.232;
+  // 地方法人税
+  var lct = ct * 0.103;
+  // 法人住民税（均等割7万 + 法人税割）
+  var iht = ct * 0.104 + 70000;
+  // 法人事業税（所得割）
+  var bt;
+  if(corpIncome <= 4000000)       bt = corpIncome * 0.035;
+  else if(corpIncome <= 8000000)  bt = 4000000*0.035 + (corpIncome-4000000)*0.053;
+  else                            bt = 4000000*0.035 + 4000000*0.053 + (corpIncome-8000000)*0.07;
+  // 特別法人事業税
+  var sbt = bt * 0.37;
+  var total = ct + lct + iht + bt + sbt;
+  return {corpTax:ct, localTax:lct, inhabTax:iht, bizTax:bt, specialBizTax:sbt,
+    total:total, rate: corpIncome > 0 ? total/corpIncome : 0};
+}
+
+// 役員報酬に対する個人税（給与所得として計算）
+// 給与所得控除＋社会保険（役員報酬ベース）＋R7固定控除を適用
+function calcExecTax(execSal){
+  var si  = calcSI(execSal);
+  var ed  = empDed(execSal);
+  var inc = execSal - ed; // 役員報酬の給与所得（＝総所得）
+  var otherDed = getOtherDed(inc);
+  var ded = si + otherDed;
+  var ti  = Math.max(0, Math.floor((inc - ded)/1000)*1000);
+  var it  = itax(ti) * 1.021;
+  var rtBase = ti * 0.1;
+  var furusato = +document.getElementById('furusato').value;
+  var rtSpecial= calcFurusatoResTaxDed(furusato, mgRate(ti), rtBase);
+  var rt  = rtBase - rtSpecial;
+  return {si:si, ed:ed, inc:inc, taxable:ti, it:it, rt:rt, total:it+rt,
+    takeHome: execSal - si - it - rt};
+}
+
+// 法人化総合計算
+function calcCorp(sal, bizProfit, execSal, corpCost){
+  // 社保は労使折半→法人（＝自分）も同額を負担
+  var siExec        = calcSI(execSal);       // 個人負担分
+  var siCorpBurden  = siExec;                // 会社負担分（同額）
+  // 法人所得 = 事業利益 ー 役員報酬 ー 社保会社負担 ー 維持コスト
+  var corpIncome = Math.max(0, bizProfit - execSal - siCorpBurden - corpCost);
+  var ct = calcCorpTax(corpIncome);
+  var et = calcExecTax(execSal);
+  var s  = calcSalOnly(sal);
+  var salTakeHome = sal - s.si - s.it - s.rt;
+  var totalCorpTax = ct.total + et.total;
+  var totalTakeHome = salTakeHome + et.takeHome;
+  return {corpIncome:corpIncome, ct:ct, et:et, salTakeHome:salTakeHome,
+    siCorpBurden:siCorpBurden,
+    totalCorpTax:totalCorpTax, totalTakeHome:totalTakeHome};
+}
+
+// 法人化サブタブ状態
+var corpSubTab = 'breakeven';
+function setCst(name, btn){
+  corpSubTab = name;
+  ['cst_breakeven','cst_salary','cst_compare'].forEach(function(id){
+    document.getElementById(id).className='tgb';
+  });
+  btn.className='tgb on';
+  var sal  = +document.getElementById('salary').value;
+  var rev  = +document.getElementById('biz_rev').value;
+  var rate = +document.getElementById('exp_rate').value;
+  drawCorp(sal, rev, rate);
+}
+
+// 法人化パネル全体描画
+function drawCorp(sal, rev, rate){
+  var r       = calc(sal, rev, rate, blueAmt);
+  var s       = calcSalOnly(sal);
+  var execSal = +document.getElementById('exec_sal').value;
+  var corpCost= +document.getElementById('corp_cost').value;
+  var bizProfit = r.profit;
+
+  // 個人事業主としての税負担・手取り
+  var addTax  = r.total - s.total;
+  var bizNet  = bizProfit - Math.max(0, addTax);
+  var salTakeHome = sal - r.si - s.it - s.rt;
+  var soleTakeHome = salTakeHome + bizNet;
+
+  // 法人化
+  var co = calcCorp(sal, bizProfit, execSal, corpCost);
+
+  // KPI更新
+  document.getElementById('cp_sole_tax').textContent  = M(Math.max(0,addTax));
+  document.getElementById('cp_sole_take').textContent = M(soleTakeHome);
+  document.getElementById('cp_sole_note').textContent =
+    '事業利益 '+M(bizProfit)+' ー 追加税 '+M(Math.max(0,addTax));
+  document.getElementById('cp_corp_tax').textContent  = M(co.totalCorpTax);
+  document.getElementById('cp_corp_take').textContent = M(co.totalTakeHome);
+  document.getElementById('cp_corp_note').textContent =
+    '役員報酬 '+M(execSal)+'　社保会社負担 '+M(co.siCorpBurden)+'　維持コスト '+M(corpCost);
+
+  document.getElementById('cp_corp_income').textContent     = M(co.corpIncome);
+  document.getElementById('cp_corp_tax_detail').textContent = M(co.ct.total);
+  document.getElementById('cp_corp_rate').textContent       = '実効税率 '+P(co.ct.rate);
+  document.getElementById('cp_exec_tax').textContent        = M(co.et.total);
+  document.getElementById('cp_si_corp').textContent         = M(co.siCorpBurden);
+
+  // 判定バナー
+  var diff = co.totalTakeHome - soleTakeHome;
+  var vEl  = document.getElementById('cp_verdict');
+  if(bizProfit === 0){
+    vEl.textContent = '⚠️ 事業利益がゼロのため判定できません';
+    vEl.style.cssText = 'background:#1c1407;border:1px solid #854d0e;color:#fbbf24;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center';
+  } else if(diff > 0){
+    vEl.innerHTML = '🏢 法人化が有利：手取りが <strong style="font-size:17px">+'+M(diff)+'</strong> 増加します（役員報酬 '+M(execSal)+'設定時）';
+    vEl.style.cssText = 'background:#071a07;border:1px solid #166534;color:#4ade80;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center';
+  } else if(diff > -500000){
+    vEl.innerHTML = '⚖️ ほぼ同等：差は <strong>'+M(Math.abs(diff))+'</strong>。維持コスト・手間を考慮して判断してください';
+    vEl.style.cssText = 'background:#1c1407;border:1px solid #854d0e;color:#fbbf24;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center';
+  } else {
+    vEl.innerHTML = '👤 個人事業主が有利：法人化すると手取りが <strong style="font-size:17px">'+M(Math.abs(diff))+'</strong> 減少します';
+    vEl.style.cssText = 'background:#2d0707;border:1px solid #991b1b;color:#f87171;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center';
+  }
+
+  // サブタブグラフ
+  dc('corp');
+  if(corpSubTab === 'breakeven') drawCorpBreakeven(sal, rate, execSal, corpCost);
+  if(corpSubTab === 'salary')    drawCorpSalaryOpt(sal, bizProfit, corpCost);
+  if(corpSubTab === 'compare')   drawCorpCompare(sal, bizProfit, execSal, corpCost, soleTakeHome, co);
+}
+
+// グラフA：損益分岐ライン（事業利益を変化させて個人 vs 法人の手取りを比較）
+function drawCorpBreakeven(sal, rate, execSal, corpCost){
+  var s = calcSalOnly(sal);
+  var salTakeHome = sal - s.si - s.it - s.rt;
+  var profits = [];
+  for(var p=0; p<=80; p+=2) profits.push(p*100000);
+  var soleArr=[], corpArr=[], diffArr=[];
+  profits.forEach(function(p){
+    var c = calcByProfit(sal, p, blueAmt);
+    var add = Math.max(0, c.total - s.total);
+    var soleT = salTakeHome + (p - add);
+    var co = calcCorp(sal, p, execSal, corpCost);
+    soleArr.push(soleT);
+    corpArr.push(co.totalTakeHome);
+    diffArr.push(co.totalTakeHome - soleT);
+  });
+  var labels = profits.map(M);
+  charts.corp = new Chart(document.getElementById('chart_corp'),{
+    type:'line',
+    data:{labels:labels, datasets:[
+      {label:'個人事業主 総手取り',  data:soleArr, borderColor:'#60a5fa', fill:false, tension:.3, pointRadius:1},
+      {label:'法人化 総手取り',       data:corpArr, borderColor:'#4ade80', fill:false, tension:.3, pointRadius:1},
+      {label:'法人化メリット（差）',  data:diffArr, borderColor:'#fbbf24', borderDash:[5,5], fill:false, tension:.3, pointRadius:1, yAxisID:'y2'},
+    ]},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true,text:'事業利益別 個人 vs 法人 総手取り比較（役員報酬'+M(execSal)+'）',color:'#6b7280',font:{size:11}}},
+      scales:{
+        x:{grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:10})},
+        y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT}),title:{display:true,text:'総手取り',color:'#6b7280',font:{size:10}}},
+        y2:{position:'right',grid:{display:false},ticks:Object.assign({},TICK,{callback:TFMT}),
+          title:{display:true,text:'手取り差（法人ー個人）',color:'#6b7280',font:{size:10}}}
+      }}
+  });
+  document.getElementById('cp_desc').innerHTML =
+    '黄色点線が0を上回る事業利益ラインが「法人化が有利になる分岐点」です。'+
+    '役員報酬・維持コストのスライダーを動かすと分岐点が変化します。';
+}
+
+// グラフB：役員報酬の最適化（役員報酬を変化させて総手取りを最大化するポイントを探す）
+function drawCorpSalaryOpt(sal, bizProfit, corpCost){
+  var s = calcSalOnly(sal);
+  var salTakeHome = sal - s.si - s.it - s.rt;
+  var maxExec = Math.min(bizProfit, 20000000);
+  var steps = 40;
+  var labels=[], takeArr=[], corpTaxArr=[], execTaxArr=[];
+  var bestTake=-Infinity, bestExec=0;
+  for(var i=0;i<=steps;i++){
+    var ex = Math.round(maxExec * i / steps);
+    var co = calcCorp(sal, bizProfit, ex, corpCost);
+    labels.push(M(ex));
+    takeArr.push(co.totalTakeHome);
+    corpTaxArr.push(co.ct.total);
+    execTaxArr.push(co.et.total);
+    if(co.totalTakeHome > bestTake){ bestTake=co.totalTakeHome; bestExec=ex; }
+  }
+  charts.corp = new Chart(document.getElementById('chart_corp'),{
+    type:'line',
+    data:{labels:labels, datasets:[
+      {label:'総手取り',         data:takeArr,    borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.3, pointRadius:2, yAxisID:'y'},
+      {label:'法人税等',         data:corpTaxArr, borderColor:'#f87171', fill:false, tension:.3, pointRadius:1, yAxisID:'y2'},
+      {label:'役員報酬の個人税', data:execTaxArr, borderColor:'#fb923c', fill:false, tension:.3, pointRadius:1, yAxisID:'y2'},
+    ]},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true,text:'役員報酬の最適化（事業利益 '+M(bizProfit)+'）',color:'#6b7280',font:{size:11}}},
+      scales:{
+        x:{grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:9})},
+        y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT}),title:{display:true,text:'総手取り',color:'#6b7280',font:{size:10}}},
+        y2:{position:'right',grid:{display:false},ticks:Object.assign({},TICK,{callback:TFMT}),
+          title:{display:true,text:'税負担',color:'#6b7280',font:{size:10}}}
+      }}
+  });
+  document.getElementById('cp_desc').innerHTML =
+    '📍 最適役員報酬：<strong style="color:#4ade80">'+M(bestExec)+'</strong> のとき総手取りが最大 <strong style="color:#4ade80">'+M(bestTake)+'</strong><br>'+
+    '役員報酬が低すぎると法人税が増え、高すぎると個人の所得税が増えるため、中間にスイートスポットがあります。';
+}
+
+// グラフC：個人 vs 法人 税目別比較棒グラフ
+function drawCorpCompare(sal, bizProfit, execSal, corpCost, soleTakeHome, co){
+  var s = calcSalOnly(sal);
+  var r2 = calcByProfit(sal, bizProfit, blueAmt);
+  var addTax = Math.max(0, r2.total - s.total);
+  charts.corp = new Chart(document.getElementById('chart_corp'),{
+    type:'bar',
+    data:{
+      labels:['所得税（個人）','住民税（個人）','個人事業税','法人税','地方法人税','法人住民税','法人事業税','特別事業税','維持コスト','総手取り'],
+      datasets:[
+        {label:'個人事業主',
+          data:[
+            addTax*(r2.it/(r2.it+r2.rt+r2.bt||1)),
+            addTax*(r2.rt/(r2.it+r2.rt+r2.bt||1)),
+            addTax*(r2.bt/(r2.it+r2.rt+r2.bt||1)),
+            0,0,0,0,0,0, soleTakeHome
+          ],
+          backgroundColor:'#60a5fa28', borderColor:'#60a5fa', borderWidth:2},
+        {label:'法人化',
+          data:[
+            co.et.it, co.et.rt, 0,
+            co.ct.corpTax, co.ct.localTax, co.ct.inhabTax, co.ct.bizTax, co.ct.specialBizTax,
+            corpCost, co.totalTakeHome
+          ],
+          backgroundColor:'#4ade8028', borderColor:'#4ade80', borderWidth:2},
+      ]
+    },
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#9ca3af',font:{size:12}}},
+        title:{display:true,text:'個人事業主 vs 法人化 税目別・手取り比較',color:'#6b7280',font:{size:11}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+M(c.raw);}}}},
+      scales:{
+        x:{grid:GRID,ticks:Object.assign({},TICK,{maxRotation:30})},
+        y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}
+      }}
+  });
+  document.getElementById('cp_desc').innerHTML =
+    '個人事業主は追加税負担のみ表示（給与所得との合算分）。法人化は役員報酬の個人税＋法人税等の合計。'+
+    '「総手取り」は給与手取り＋事業手取りの合計です。';
+}
+
+// ── トグル・タブ切替
+function setBlue(v){
+  blueAmt = v===65?650000:v===10?100000:0;
+  ['bl65','bl10','bl0'].forEach(function(id){ document.getElementById(id).className='tgb'; });
+  document.getElementById('bl'+v).className='tgb on';
+  update();
+}
+function switchTab(name,btn){
+  document.querySelectorAll('.pane').forEach(function(p){ p.className='pane'; });
+  document.querySelectorAll('.tabb').forEach(function(b){ b.className='tabb'; });
+  document.getElementById('pane_'+name).className='pane show';
+  btn.className='tabb on';
+  var sal  = +document.getElementById('salary').value;
+  var rev  = +document.getElementById('biz_rev').value;
+  var rate = +document.getElementById('exp_rate').value;
+  drawChart(name, sal, rev, rate);
+}
+
+// ── 初期化
+window.addEventListener('load', function(){
+  if(typeof Chart === 'undefined'){
+    document.body.innerHTML='<p style="color:#f87171;padding:30px">⚠️ Chart.jsの読み込みに失敗しました。インターネット接続をご確認ください。</p>';
+    return;
+  }
+  update();
+});
+</script>
+</body>
+</html>
