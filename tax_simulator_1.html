@@ -420,7 +420,6 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
   <div class="tabr">
     <button class="tabb on" onclick="switchTab('compare',this)">給与のみ vs 給与+事業</button>
     <button class="tabb"    onclick="switchTab('profit',this)">利益別・税額分析</button>
-    <button class="tabb"    onclick="switchTab('expense',this)">経費率の影響</button>
     <button class="tabb"    onclick="switchTab('rev',this)">売上別シミュレーション</button>
     <button class="tabb"    onclick="switchTab('margin',this)">限界分析</button>
     <button class="tabb"    onclick="switchTab('corp',this)" style="border-color:#7c3aed;color:#c084fc">🏢 法人化分析</button>
@@ -429,7 +428,6 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
   <div class="card" style="padding:14px 16px">
     <div class="pane show" id="pane_compare"><canvas id="chart_compare"></canvas></div>
     <div class="pane"      id="pane_profit"><canvas id="chart_profit"></canvas></div>
-    <div class="pane"      id="pane_expense"><canvas id="chart_expense"></canvas></div>
     <div class="pane"      id="pane_rev"><canvas id="chart_rev"></canvas></div>
     <div class="pane"      id="pane_margin"><canvas id="chart_margin"></canvas></div>
 
@@ -947,134 +945,155 @@ function drawCompare(sal, rev, expAbs){
   });
 }
 
-// グラフ1：利益別 税額内訳
+// グラフ1：利益別 税額内訳（右軸に実効税率%を追加）
 function drawProfit(sal, rev, expAbs){
   dc('profit');
-  var maxP = Math.max(rev>0?rev:3000000, 1000000);
+  var maxP  = Math.max(rev > 0 ? rev : 5000000, 2000000);
   var steps = 24;
-  var labels=[], netD=[], itD=[], rtD=[], btD=[];
+  var labels=[], netD=[], itD=[], rtD=[], btD=[], effD=[];
   var s = calcSalOnly(sal);
   for(var i=0;i<=steps;i++){
-    var p  = Math.round(maxP*i/steps);
-    var c  = calcByProfit(sal, p, blueAmt);
-    var add= Math.max(0, c.total-s.total);
-    var t3 = (c.it+c.rt+c.bt)||1;
+    var p   = Math.round(maxP * i / steps);
+    var c   = calcByProfit(sal, p, blueAmt);
+    var add = Math.max(0, c.total - s.total);
+    var t3  = (c.it + c.rt + c.bt) || 1;
     labels.push(M(p));
-    itD.push(Math.round(add*c.it/t3));
-    rtD.push(Math.round(add*c.rt/t3));
-    btD.push(Math.round(add*c.bt/t3));
-    netD.push(Math.max(0, p-add));
+    itD.push(Math.round(add * c.it / t3));
+    rtD.push(Math.round(add * c.rt / t3));
+    btD.push(Math.round(add * c.bt / t3));
+    netD.push(Math.max(0, p - add));
+    effD.push(p > 0 ? +(add / p * 100).toFixed(1) : 0);
   }
   charts.profit = new Chart(document.getElementById('chart_profit'),{
     type:'bar',
     data:{labels:labels, datasets:[
-      {label:'事業手取り', data:netD, backgroundColor:'#4ade8028', borderColor:'#4ade80', borderWidth:1, stack:'s'},
-      {label:'追加所得税', data:itD,  backgroundColor:'#f8717128', borderColor:'#f87171', borderWidth:1, stack:'s'},
-      {label:'追加住民税', data:rtD,  backgroundColor:'#fb923c28', borderColor:'#fb923c', borderWidth:1, stack:'s'},
-      {label:'個人事業税', data:btD,  backgroundColor:'#c084fc28', borderColor:'#c084fc', borderWidth:1, stack:'s'},
+      {type:'bar',  label:'事業手取り', data:netD, backgroundColor:'#4ade8028', borderColor:'#4ade80', borderWidth:1, stack:'s', yAxisID:'y'},
+      {type:'bar',  label:'追加所得税', data:itD,  backgroundColor:'#f8717128', borderColor:'#f87171', borderWidth:1, stack:'s', yAxisID:'y'},
+      {type:'bar',  label:'追加住民税', data:rtD,  backgroundColor:'#fb923c28', borderColor:'#fb923c', borderWidth:1, stack:'s', yAxisID:'y'},
+      {type:'bar',  label:'個人事業税', data:btD,  backgroundColor:'#c084fc28', borderColor:'#c084fc', borderWidth:1, stack:'s', yAxisID:'y'},
+      {type:'line', label:'実効税率（%）', data:effD, borderColor:'#fbbf24', borderDash:[5,5], fill:false, tension:.3, pointRadius:2, yAxisID:'y2'},
     ]},
     options:{responsive:true,
-      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
-        title:{display:true,text:'事業利益別 手取りと追加税負担の内訳（給与のみ比）',color:'#6b7280',font:{size:11}}},
+      plugins:{
+        legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true, text:'事業利益別 手取り・追加税負担と実効税率（給与のみ比）', color:'#6b7280', font:{size:11}},
+        tooltip:{callbacks:{label:function(ctx){
+          if(ctx.dataset.yAxisID==='y2') return ctx.dataset.label+': '+ctx.raw+'%';
+          return ctx.dataset.label+': '+M(ctx.raw);
+        }}}
+      },
       scales:{
-        x:{stacked:true,grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:9})},
-        y:{stacked:true,grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}
+        x:{stacked:true, grid:GRID, ticks:Object.assign({},TICK,{maxTicksLimit:9})},
+        y:{stacked:true, grid:GRID, ticks:Object.assign({},TICK,{callback:TFMT}),
+          title:{display:true, text:'金額', color:'#6b7280', font:{size:10}}},
+        y2:{position:'right', grid:{display:false}, min:0, max:60,
+          ticks:Object.assign({},TICK,{callback:function(v){return v+'%';}}),
+          title:{display:true, text:'実効税率', color:'#6b7280', font:{size:10}}}
       }}
   });
 }
 
-// グラフ2：経費額の影響（経費を0〜売上まで変化させる）
-function drawExpense(sal, rev){
-  dc('expense');
-  var s = calcSalOnly(sal);
-  var steps = 20;
-  var rows=[];
-  for(var i=0;i<=steps;i++){
-    var expA = Math.round(rev * i / steps);
-    var c = calc(sal, rev, expA, blueAmt);
-    var add = Math.max(0, c.total-s.total);
-    rows.push({exp:expA, profit:c.profit, add:add, net:c.profit-add});
-  }
-  charts.expense = new Chart(document.getElementById('chart_expense'),{
-    type:'line',
-    data:{labels:rows.map(function(r){return M(r.exp);}),datasets:[
-      {label:'事業手取り', data:rows.map(function(r){return r.net;}),    borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.3, pointRadius:2},
-      {label:'追加税負担', data:rows.map(function(r){return r.add;}),    borderColor:'#f87171', fill:false, tension:.3, pointRadius:2},
-      {label:'事業利益',   data:rows.map(function(r){return r.profit;}), borderColor:'#60a5fa', borderDash:[5,5], fill:false, tension:.3, pointRadius:1},
-    ]},
-    options:{responsive:true,
-      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
-        title:{display:true,text:'経費額の影響（売上'+M(rev)+'、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
-      scales:{x:{grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:8})},y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}}}
-  });
-}
+// グラフ2：経費率の影響（削除済み）
+function drawExpense(){ /* 削除 */ }
 
-// グラフ3：売上別シミュレーション（現在の経費率を維持して売上を変化）
+// グラフ3：売上別シミュレーション（等差数列・現在の売上スケールに合わせる）
 function drawRev(sal, expAbs, currentRev){
   dc('rev');
   var s = calcSalOnly(sal);
-  // 現在の経費率を算出して各売上に比例適用
   var expRatio = currentRev > 0 ? expAbs / currentRev : 0;
-  var revs=[0,100,200,300,500,700,1000,1500,2000,3000,4000,5000,7000,10000];
-  var rows=revs.map(function(rv){
-    var revVal = rv*10000;
-    var expVal = Math.round(revVal * expRatio);
-    var c = calc(sal, revVal, expVal, blueAmt);
-    var add = Math.max(0, c.total-s.total);
-    return {lbl:rv===0?'0万':rv+'万',
-      itAdd:Math.max(0,c.it-s.it), rtAdd:Math.max(0,c.rt-s.rt),
-      bt:c.bt, net:c.profit-add, eff:+(add>0&&c.profit>0?add/c.profit*100:0).toFixed(1)};
-  });
-  var expPct = currentRev > 0 ? Math.round(expRatio*100) : 0;
+
+  // 等差数列：現在の売上を基準に上限を決め、12等分
+  var maxRev = Math.max(currentRev * 1.5, 10000000);
+  // 切りのよいステップに丸める
+  var rawStep = maxRev / 12;
+  var mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  var step = Math.ceil(rawStep / mag) * mag;
+  maxRev = step * 12;
+
+  var rows = [];
+  for(var rv = 0; rv <= maxRev; rv += step){
+    var expVal = Math.round(rv * expRatio);
+    var c   = calc(sal, rv, expVal, blueAmt);
+    var add = Math.max(0, c.total - s.total);
+    rows.push({
+      lbl:    M(rv),
+      itAdd:  Math.max(0, c.it - s.it),
+      rtAdd:  Math.max(0, c.rt - s.rt),
+      bt:     c.bt,
+      net:    c.profit - add,
+      eff:    +(add > 0 && c.profit > 0 ? add / c.profit * 100 : 0).toFixed(1)
+    });
+  }
+
   charts.rev = new Chart(document.getElementById('chart_rev'),{
     type:'bar',
-    data:{labels:rows.map(function(r){return r.lbl;}),datasets:[
+    data:{labels:rows.map(function(r){return r.lbl;}), datasets:[
       {type:'bar',  label:'追加所得税',  data:rows.map(function(r){return r.itAdd;}), backgroundColor:'#f8717128', borderColor:'#f87171', borderWidth:1, stack:'t'},
       {type:'bar',  label:'追加住民税',  data:rows.map(function(r){return r.rtAdd;}), backgroundColor:'#fb923c28', borderColor:'#fb923c', borderWidth:1, stack:'t'},
       {type:'bar',  label:'個人事業税',  data:rows.map(function(r){return r.bt;}),    backgroundColor:'#c084fc28', borderColor:'#c084fc', borderWidth:1, stack:'t'},
-      {type:'line', label:'事業手取り',  data:rows.map(function(r){return r.net;}),   borderColor:'#4ade80', fill:false, tension:.3, pointRadius:4, yAxisID:'y'},
-      {type:'line', label:'実効税率(%)', data:rows.map(function(r){return r.eff;}),   borderColor:'#fbbf24', borderDash:[5,5], fill:false, tension:.3, pointRadius:2, yAxisID:'y2'},
+      {type:'line', label:'事業手取り',  data:rows.map(function(r){return r.net;}),   borderColor:'#4ade80', fill:false, tension:.2, pointRadius:3, yAxisID:'y'},
+      {type:'line', label:'実効税率(%)', data:rows.map(function(r){return r.eff;}),   borderColor:'#fbbf24', borderDash:[5,5], fill:false, tension:.2, pointRadius:2, yAxisID:'y2'},
     ]},
     options:{responsive:true,
-      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
-        title:{display:true,text:'売上別 税額・手取り（経費率'+expPct+'%固定、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
+      plugins:{
+        legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true, text:'売上別 税額・手取り（経費率'+Math.round(expRatio*100)+'%固定、給与'+M(sal)+'）', color:'#6b7280', font:{size:11}},
+        tooltip:{callbacks:{label:function(ctx){
+          if(ctx.dataset.yAxisID==='y2') return ctx.dataset.label+': '+ctx.raw+'%';
+          return ctx.dataset.label+': '+M(ctx.raw);
+        }}}
+      },
       scales:{
-        x:{grid:GRID,ticks:TICK},
-        y:{stacked:true,grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})},
-        y2:{position:'right',grid:{display:false},min:0,max:50,ticks:Object.assign({},TICK,{callback:function(v){return v+'%';}})}
+        x:{grid:GRID, ticks:TICK},
+        y:{stacked:true, grid:GRID, ticks:Object.assign({},TICK,{callback:TFMT})},
+        y2:{position:'right', grid:{display:false}, min:0, max:60,
+          ticks:Object.assign({},TICK,{callback:function(v){return v+'%';}})}
       }}
   });
 }
 
-// グラフ4：限界分析
+// グラフ4：限界分析（step=10万円で精度向上・所得税ブラケット境界を正確に捉える）
 function drawMargin(sal){
   dc('margin');
-  var s = calcSalOnly(sal);
-  var maxP=80000000, step=1000000;
+  var s    = calcSalOnly(sal);
+  var maxP = 20000000;  // 2,000万まで
+  var step = 100000;    // 10万円刻み
   var labels=[], margArr=[], netGain=[];
-  for(var p=0;p<maxP;p+=step){
-    var c1 = calcByProfit(sal, p, blueAmt);
+
+  for(var p = 0; p < maxP; p += step){
+    var c1 = calcByProfit(sal, p,      blueAmt);
     var c2 = calcByProfit(sal, p+step, blueAmt);
     var td = c2.total - c1.total;
     labels.push(M(p));
-    margArr.push(+(td/step*100).toFixed(1));
-    netGain.push(step-td);
+    // 限界税率：税増分 / 利益増分 × 100
+    margArr.push(+(td / step * 100).toFixed(1));
+    // 手取り増加額：利益増分 - 税増分
+    netGain.push(Math.round(step - td));
   }
+
   charts.margin = new Chart(document.getElementById('chart_margin'),{
     type:'line',
-    data:{labels:labels,datasets:[
-      {label:'手取り増加額（円/100万円増）', data:netGain, borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.2, pointRadius:1, yAxisID:'y'},
-      {label:'限界税率（%）',               data:margArr, borderColor:'#f87171', borderDash:[4,4],            fill:false, tension:.2, pointRadius:1, yAxisID:'y2'},
+    data:{labels:labels, datasets:[
+      {label:'手取り増加額（円/10万円増）', data:netGain, borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.1, pointRadius:0, yAxisID:'y'},
+      {label:'限界税率（%）',               data:margArr, borderColor:'#f87171', borderDash:[4,4],            fill:false, tension:.1, pointRadius:0, yAxisID:'y2'},
     ]},
     options:{responsive:true,
-      plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
-        title:{display:true,text:'限界分析：利益100万円増やすと手取りはいくら増えるか（給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
+      plugins:{
+        legend:{labels:{color:'#9ca3af',font:{size:11}}},
+        title:{display:true, text:'限界分析：利益10万円増やすと手取りはいくら増えるか（給与'+M(sal)+'）', color:'#6b7280', font:{size:11}},
+        tooltip:{callbacks:{label:function(ctx){
+          if(ctx.dataset.yAxisID==='y2') return ctx.dataset.label+': '+ctx.raw+'%';
+          return ctx.dataset.label+': '+ctx.raw.toLocaleString()+'円';
+        }}}
+      },
       scales:{
-        x:{grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:9}),title:{display:true,text:'事業利益',color:'#6b7280',font:{size:10}}},
-        y:{grid:GRID,ticks:TICK,title:{display:true,text:'手取り増加額（円）',color:'#6b7280',font:{size:10}}},
-        y2:{position:'right',grid:{display:false},min:0,max:80,
+        x:{grid:GRID, ticks:Object.assign({},TICK,{maxTicksLimit:11}),
+          title:{display:true, text:'事業利益', color:'#6b7280', font:{size:10}}},
+        y:{grid:GRID, ticks:TICK,
+          title:{display:true, text:'手取り増加額（円）', color:'#6b7280', font:{size:10}}},
+        y2:{position:'right', grid:{display:false}, min:0, max:80,
           ticks:Object.assign({},TICK,{callback:function(v){return v+'%';}}),
-          title:{display:true,text:'限界税率(%)',color:'#6b7280',font:{size:10}}}
+          title:{display:true, text:'限界税率(%)', color:'#6b7280', font:{size:10}}}
       }}
   });
 }
@@ -1082,7 +1101,6 @@ function drawMargin(sal){
 function drawChart(tab, sal, rev, expAbs){
   if(tab==='compare') drawCompare(sal, rev, expAbs);
   if(tab==='profit')  drawProfit(sal, rev, expAbs);
-  if(tab==='expense') drawExpense(sal, rev);
   if(tab==='rev')     drawRev(sal, expAbs, rev);
   if(tab==='margin')  drawMargin(sal);
   if(tab==='corp')    drawCorp(sal, rev, expAbs);
