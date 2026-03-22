@@ -127,7 +127,41 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
       <div class="blr dyn"><span>給与収入</span><span id="d_sal_rev"></span></div>
       <div class="blr dyn"><span>給与所得控除</span><span id="d_sal_ded"></span></div>
       <div class="blr dyn"><span>給与所得</span><span id="d_sal_inc"></span></div>
-      <div class="blr dyn"><span>社会保険料（自動計算）</span><span id="d_si"></span></div>
+    </div>
+
+    <!-- 社会保険料ボックス -->
+    <div class="bl">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="blt" style="margin-bottom:0">社会保険料</div>
+        <div style="display:flex;gap:4px">
+          <button class="tgb on" id="si_auto_btn" onclick="setSiMode('auto')" style="padding:3px 10px;font-size:10px">自動</button>
+          <button class="tgb"    id="si_manual_btn" onclick="setSiMode('manual')" style="padding:3px 10px;font-size:10px">手動</button>
+        </div>
+      </div>
+
+      <!-- 自動計算表示 -->
+      <div id="si_auto_area">
+        <div class="blr dyn"><span>社会保険料（自動計算）</span><span id="d_si"></span></div>
+        <div style="font-size:10px;color:#854d0e;background:#1c1407;border:1px solid #854d0e;border-radius:5px;padding:6px 9px;margin-top:6px;line-height:1.7">
+          ⚠️ 実際の金額と誤差が生じる場合があります<br>
+          原因①：等級テーブルによる標準報酬月額の切り捨て<br>
+          原因②：4〜6月の算定基礎月と年収の乖離<br>
+          原因③：賞与の別計算（月給と賞与で保険料計算が異なる）<br>
+          正確な値は源泉徴収票の「社会保険料等の金額」欄を手動入力してください
+        </div>
+      </div>
+
+      <!-- 手動入力エリア -->
+      <div id="si_manual_area" style="display:none">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+          <span style="font-size:12px;color:var(--muted);flex:1">社会保険料（実績値）</span>
+          <input type="number" class="ni" id="ni_si_manual" min="0" max="300" step="1" value="0"
+            oninput="updateManualSI()" onchange="updateManualSI()">
+          <span class="sl-unit">万円</span>
+        </div>
+        <div style="font-size:10px;color:#4b5563">源泉徴収票の「社会保険料等の金額」欄を入力</div>
+        <div class="blr dyn" style="margin-top:6px"><span>適用中の社会保険料</span><span id="d_si"></span></div>
+      </div>
     </div>
 
     <!-- 可変控除スライダー -->
@@ -137,12 +171,12 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
       <div class="sr" style="margin-bottom:10px">
         <div class="sl-wrap" style="margin-bottom:4px">
           <span class="sl-lbl">🏥 医療費（実支払額）</span>
-          <input type="number" class="ni" id="ni_med_exp" min="0" max="100" step="1" value="0"
-            oninput="syncFromInput('med_exp',this,10000)" onchange="syncFromInput('med_exp',this,10000)">
+          <input type="number" class="ni" id="ni_med_exp" min="0" max="200" step="0.1" value="0"
+            oninput="syncFromInput('med_exp',this,10000,1)" onchange="syncFromInput('med_exp',this,10000,1)">
           <span class="sl-unit">万円</span>
         </div>
-        <input type="range" id="med_exp" min="0" max="1000000" step="5000" value="0"
-          oninput="syncFromSlider('med_exp','ni_med_exp',10000);update()" style="accent-color:#f87171">
+        <input type="range" id="med_exp" min="0" max="2000000" step="1000" value="0"
+          oninput="syncFromSlider('med_exp','ni_med_exp',10000,1);update()" style="accent-color:#f87171">
         <div class="sn" id="n_med">控除額 = 支払額 ー 10万円（所得5%以下の場合）</div>
       </div>
 
@@ -152,29 +186,29 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span class="sl-lbl" style="font-size:11px">一般生命保険料</span>
           <input type="number" class="ni" id="ni_life_gen" min="0" max="40" step="0.1" value="0"
-            oninput="syncFromInput('life_gen',this,10000)" onchange="syncFromInput('life_gen',this,10000)">
+            oninput="syncFromInput('life_gen',this,10000,1)" onchange="syncFromInput('life_gen',this,10000,1)">
           <span class="sl-unit">万円</span>
         </div>
-        <input type="range" id="life_gen" min="0" max="400000" step="5000" value="0"
-          oninput="syncFromSlider('life_gen','ni_life_gen',10000);update()" style="accent-color:#a78bfa;margin-bottom:6px">
+        <input type="range" id="life_gen" min="0" max="400000" step="1000" value="0"
+          oninput="syncFromSlider('life_gen','ni_life_gen',10000,1);update()" style="accent-color:#a78bfa;margin-bottom:6px">
 
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span class="sl-lbl" style="font-size:11px">介護医療保険料</span>
           <input type="number" class="ni" id="ni_life_care" min="0" max="40" step="0.1" value="0"
-            oninput="syncFromInput('life_care',this,10000)" onchange="syncFromInput('life_care',this,10000)">
+            oninput="syncFromInput('life_care',this,10000,1)" onchange="syncFromInput('life_care',this,10000,1)">
           <span class="sl-unit">万円</span>
         </div>
-        <input type="range" id="life_care" min="0" max="400000" step="5000" value="0"
-          oninput="syncFromSlider('life_care','ni_life_care',10000);update()" style="accent-color:#c084fc;margin-bottom:6px">
+        <input type="range" id="life_care" min="0" max="400000" step="1000" value="0"
+          oninput="syncFromSlider('life_care','ni_life_care',10000,1);update()" style="accent-color:#c084fc;margin-bottom:6px">
 
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span class="sl-lbl" style="font-size:11px">個人年金保険料</span>
           <input type="number" class="ni" id="ni_life_pen" min="0" max="40" step="0.1" value="0"
-            oninput="syncFromInput('life_pen',this,10000)" onchange="syncFromInput('life_pen',this,10000)">
+            oninput="syncFromInput('life_pen',this,10000,1)" onchange="syncFromInput('life_pen',this,10000,1)">
           <span class="sl-unit">万円</span>
         </div>
-        <input type="range" id="life_pen" min="0" max="400000" step="5000" value="0"
-          oninput="syncFromSlider('life_pen','ni_life_pen',10000);update()" style="accent-color:#e879f9">
+        <input type="range" id="life_pen" min="0" max="400000" step="1000" value="0"
+          oninput="syncFromSlider('life_pen','ni_life_pen',10000,1);update()" style="accent-color:#e879f9">
         <div class="sn" id="n_life">各区分：≦2万→全額、〜4万→×½+1万、〜8万→×¼+2万、超→4万（新契約）</div>
       </div>
 
@@ -182,11 +216,11 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
         <div class="sl-wrap" style="margin-bottom:4px">
           <span class="sl-lbl">🎁 ふるさと納税（寄附額）</span>
           <input type="number" class="ni" id="ni_furusato" min="0" max="100" step="0.1" value="0"
-            oninput="syncFromInput('furusato',this,10000)" onchange="syncFromInput('furusato',this,10000)">
+            oninput="syncFromInput('furusato',this,10000,1)" onchange="syncFromInput('furusato',this,10000,1)">
           <span class="sl-unit">万円</span>
         </div>
         <input type="range" id="furusato" min="0" max="1000000" step="1000" value="0"
-          oninput="syncFromSlider('furusato','ni_furusato',10000);update()" style="accent-color:#34d399">
+          oninput="syncFromSlider('furusato','ni_furusato',10000,1);update()" style="accent-color:#34d399">
         <div class="sn" id="n_furusato">控除額 = 寄附額 ー 2,000円　※ワンストップ特例は住民税のみ・確定申告は所得税にも適用</div>
       </div>
 
@@ -217,23 +251,33 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
     <div class="sr">
       <div class="sl-wrap">
         <span class="sl-lbl">事業売上</span>
-        <input type="number" class="ni" id="ni_biz_rev" min="0" max="10000" step="10" value="0"
-          oninput="syncFromInput('biz_rev',this,10000)" onchange="syncFromInput('biz_rev',this,10000)">
+        <input type="number" class="ni" id="ni_biz_rev" min="0" max="10000" step="0.1" value="0"
+          oninput="syncFromInput('biz_rev',this,10000,1)" onchange="syncFromInput('biz_rev',this,10000,1)">
         <span class="sl-unit">万円</span>
       </div>
-      <input type="range" id="biz_rev" min="0" max="100000000" step="500000" value="0"
-        oninput="syncFromSlider('biz_rev','ni_biz_rev',10000);update()" style="accent-color:#4ade80">
+      <input type="range" id="biz_rev" min="0" max="100000000" step="1000" value="0"
+        oninput="syncFromSlider('biz_rev','ni_biz_rev',10000,1);update()" style="accent-color:#4ade80">
       <div class="sn" id="n_rev"></div>
     </div>
     <div class="sr">
       <div class="sl-wrap">
-        <span class="sl-lbl">経費率（必要経費÷売上）</span>
-        <input type="number" class="ni" id="ni_exp_rate" min="0" max="99" step="1" value="79"
-          oninput="syncFromInput('exp_rate',this,1)" onchange="syncFromInput('exp_rate',this,1)">
-        <span class="sl-unit">%</span>
+        <span class="sl-lbl">売上原価（仕入・製造原価）</span>
+        <input type="number" class="ni" id="ni_biz_cogs" min="0" max="10000" step="0.1" value="0"
+          oninput="updateExpAbs()" onchange="updateExpAbs()">
+        <span class="sl-unit">万円</span>
       </div>
-      <input type="range" id="exp_rate" min="0" max="99" step="1" value="79"
-        oninput="syncFromSlider('exp_rate','ni_exp_rate',1);update()" style="accent-color:#fb923c">
+      <input type="range" id="biz_cogs" min="0" max="100000000" step="1000" value="0"
+        oninput="syncFromSlider('biz_cogs','ni_biz_cogs',10000);updateExpAbs()" style="accent-color:#fb923c">
+    </div>
+    <div class="sr">
+      <div class="sl-wrap">
+        <span class="sl-lbl">必要経費（販管費・その他）</span>
+        <input type="number" class="ni" id="ni_biz_opex" min="0" max="10000" step="0.1" value="0"
+          oninput="updateExpAbs()" onchange="updateExpAbs()">
+        <span class="sl-unit">万円</span>
+      </div>
+      <input type="range" id="biz_opex" min="0" max="100000000" step="1000" value="0"
+        oninput="syncFromSlider('biz_opex','ni_biz_opex',10000);updateExpAbs()" style="accent-color:#f97316">
       <div class="sn" id="n_exp"></div>
     </div>
 
@@ -245,6 +289,14 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
     </div>
 
     <div style="font-size:10px;color:#4b5563">※副業バレ対策：確定申告時に住民税を「普通徴収（自分で納付）」に設定すると、副業分の住民税増加が会社に通知されません</div>
+
+    <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px">🧾 消費税（原則課税・課税事業者固定）</div>
+      <div style="background:#1c1407;border:1px solid #854d0e;border-radius:6px;padding:7px 11px;font-size:10px;color:#fbbf24;line-height:1.7">
+        預かり消費税（売上×10/110）ー 仕入消費税（経費×10/110）＝ 納付額<br>
+        ※売上・経費は税込金額として入力してください
+      </div>
+    </div>
   </div>
 
   <!-- 法人化パラメーター -->
@@ -281,7 +333,6 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
 
 <!-- ===== 右パネル ===== -->
 <div>
-  <div class="ab" id="ab_shohi">⚠️ <strong>消費税に注意：</strong>事業売上が1,000万円を超えると、2年後から消費税課税事業者になります。</div>
   <div class="ab" id="ab_jigyo">📌 <strong>個人事業税が発生：</strong>事業所得が290万円を超えると個人事業税（5%）が課税されます。</div>
 
   <div class="tbr" id="tbr"></div>
@@ -308,8 +359,8 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
   <!-- KPI群 -->
   <div class="kg3">
     <div class="kpi"><div class="kl">事業利益（経費控除後）</div><div class="kv" id="k_profit" style="color:var(--green)"></div><div class="ks" id="k_profit_s"></div></div>
+    <div class="kpi" style="border-color:#b45309"><div class="kl" style="color:#fbbf24">🧾 消費税（納付額）</div><div class="kv" id="k_ct" style="color:#fbbf24"></div><div class="ks" id="k_ct_s"></div></div>
     <div class="kpi"><div class="kl">給与のみ比　追加税負担</div><div class="kv" id="k_add"></div><div class="ks" id="k_add_s"></div></div>
-    <div class="kpi"><div class="kl">事業の実効税率</div><div class="kv" id="k_eff" style="color:var(--yellow)"></div><div class="ks" id="k_mg_s"></div></div>
   </div>
   <div class="kg3">
     <div class="kpi"><div class="kl">課税所得</div><div class="kv" id="k_ti" style="color:var(--orange)"></div><div class="ks" id="k_ti_s"></div></div>
@@ -318,7 +369,8 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
   </div>
   <div class="kg3">
     <div class="kpi"><div class="kl">個人事業税</div><div class="kv" id="k_bt"></div><div class="ks">事業所得290万超から5%</div></div>
-    <div class="kpi" style="grid-column:span 2"><div class="kl">合計税額（給与＋事業）</div><div class="kv" id="k_tt" style="color:var(--red)"></div><div class="ks" id="k_tt_s"></div></div>
+    <div class="kpi"><div class="kl">事業の実効税率</div><div class="kv" id="k_eff" style="color:var(--yellow)"></div><div class="ks" id="k_mg_s"></div></div>
+    <div class="kpi" style="grid-column:span 1"><div class="kl">合計税額（給与＋事業）</div><div class="kv" id="k_tt" style="color:var(--red)"></div><div class="ks" id="k_tt_s"></div></div>
   </div>
 
   <!-- 計算式バー -->
@@ -426,11 +478,10 @@ footer{font-size:10px;color:#374151;line-height:1.8;margin-top:10px}
   </div>
 
   <footer>
-    ⚠️ 概算シミュレーションです。社会保険料は協会けんぽ東京・40歳未満の標準報酬月額ベースで自動計算。
-    住民税は課税所得×10%（均等割除く）に住民税特例控除を適用。個人事業税は第5種事業（卸売）5%。復興特別所得税（×2.1%）含む。
-    ふるさと納税は所得税控除＋住民税特例控除を計算（確定申告利用前提）。医療費控除はmin(総所得×5%, 10万円)を閾値として計算。
-    生命保険料控除は新契約・3区分対応（一般・介護医療・個人年金、各上限4万・合計最大12万）。
-    法人化時の社保は労使折半・会社負担分を法人コストに計上。実際の申告は税理士にご確認ください。
+    ⚠️ 概算シミュレーションです。消費税は課税事業者として計算（売上税込前提）。簡易課税はみなし仕入率適用、原則課税は売上・経費の消費税差額。
+    社会保険料は協会けんぽ東京・40歳未満の標準報酬月額ベースで自動計算。住民税は課税所得×10%に住民税特例控除を適用。
+    個人事業税は第5種事業（卸売）5%。復興特別所得税（×2.1%）含む。医療費控除はmin(総所得×5%, 10万円)で計算。
+    生命保険料控除は新契約・3区分対応。法人化時の社保は会社負担分を計上。実際の申告は税理士にご確認ください。
   </footer>
 </div>
 </div><!-- /layout -->
@@ -535,11 +586,11 @@ function calcSI(sal){
 }
 
 // ── メイン計算（給与＋事業）
-function calc(sal, rev, expRate, blueAmt){
-  var si      = calcSI(sal);
+function calc(sal, rev, expAbs, blueAmt){
+  var si      = getSI(sal);
   var ed      = empDed(sal);
   var salInc  = sal - ed;
-  var exp     = Math.round(rev * expRate / 100);
+  var exp     = Math.min(expAbs, rev);  // 経費が売上を超えないように
   var profit  = Math.max(0, rev - exp);
   var blueApp = Math.min(blueAmt, profit);
   var bizInc  = Math.max(0, profit - blueApp);
@@ -562,7 +613,7 @@ function calc(sal, rev, expRate, blueAmt){
 
 // ── 給与のみ計算（事業ゼロ）
 function calcSalOnly(sal){
-  var si      = calcSI(sal);
+  var si      = getSI(sal);
   var ed      = empDed(sal);
   var salInc  = sal - ed;
   var otherDed= getOtherDed(salInc); // 給与所得が総所得
@@ -579,7 +630,7 @@ function calcSalOnly(sal){
 
 // ── 利益直接指定版（グラフ用）
 function calcByProfit(sal, profit, blueAmt){
-  var si      = calcSI(sal);
+  var si      = getSI(sal);
   var ed      = empDed(sal);
   var salInc  = sal - ed;
   var ba      = Math.min(blueAmt, profit);
@@ -599,20 +650,56 @@ function calcByProfit(sal, profit, blueAmt){
 }
 
 // ── 状態
-var blueAmt = 650000;
+var blueAmt  = 650000;
+var siMode   = 'auto';   // 'auto' | 'manual'
+
+// 社会保険料を状態に応じて返す（calc関数から呼ぶ）
+function getSI(sal){
+  if(siMode === 'manual'){
+    var v = parseFloat(document.getElementById('ni_si_manual').value) || 0;
+    return Math.round(v * 10000);
+  }
+  return calcSI(sal);
+}
+
+function setSiMode(mode){
+  siMode = mode;
+  document.getElementById('si_auto_btn').className   = 'tgb'+(mode==='auto'?' on':'');
+  document.getElementById('si_manual_btn').className = 'tgb'+(mode==='manual'?' on':'');
+  document.getElementById('si_auto_area').style.display   = mode==='auto'?'block':'none';
+  document.getElementById('si_manual_area').style.display = mode==='manual'?'block':'none';
+  update();
+}
+
+function updateManualSI(){
+  update();
+}
+
+// ── 消費税計算（原則課税・課税事業者固定）
+// 売上・経費は税込として扱う
+function calcConsumptionTax(revInclTax, expInclTax){
+  var collected = revInclTax * 10 / 110;   // 預かり消費税
+  var paid      = expInclTax * 10 / 110;   // 仕入消費税
+  return Math.round(Math.max(0, collected - paid));
+}
 
 // ── スライダー ↔ 数値入力 双方向同期
-function syncFromSlider(sliderId, inputId, divisor){
+function syncFromSlider(sliderId, inputId, divisor, dec){
   var v = +document.getElementById(sliderId).value;
-  document.getElementById(inputId).value = +(v / divisor).toFixed(divisor===1?0:2);
+  var d = (dec !== undefined) ? dec : (divisor===1 ? 0 : 1);
+  document.getElementById(inputId).value = +(v / divisor).toFixed(d);
 }
-function syncFromInput(sliderId, inputEl, divisor){
+function syncFromInput(sliderId, inputEl, divisor, dec){
   var raw = parseFloat(inputEl.value) || 0;
   var v   = Math.round(raw * divisor);
   var slider = document.getElementById(sliderId);
+  // スライダーのstepに合わせて丸める
+  var step = +slider.step || 1;
+  v = Math.round(v / step) * step;
   v = Math.max(+slider.min, Math.min(+slider.max, v));
   slider.value = v;
-  inputEl.value = +(v / divisor).toFixed(divisor===1?0:2);
+  var d = (dec !== undefined) ? dec : (divisor===1 ? 0 : 1);
+  inputEl.value = +(v / divisor).toFixed(d);
   update();
 }
 
@@ -632,6 +719,12 @@ function dc(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
 var GRID = {color:'#1f2937'};
 var TICK = {color:'#6b7280', font:{size:10, family:"'Noto Sans JP',sans-serif"}};
 function TFMT(v){ return Math.round(v/10000)+'万'; }
+
+// フォーカス中のinputは上書きしない（タイピング中に値がリセットされる問題を防ぐ）
+function setNI(id, val){
+  if(document.activeElement && document.activeElement.id === id) return;
+  document.getElementById(id).value = val;
+}
 
 // ══════════════════════════════════════════════
 //  メイン更新
@@ -654,12 +747,12 @@ function update(){
   var lifeTotalDed= lifeGenDed + lifeCareDed + lifePenDed;
   var furusatoDed = calcFurusatoDed(furusato);
   var otherTotal  = medDed + lifeTotalDed + furusatoDed + BASIC_DED;
-  // 数値inputとスライダーの表示を同期
-  document.getElementById('ni_med_exp').value    = +(medExp/10000).toFixed(2);
-  document.getElementById('ni_life_gen').value   = +(lifeGen/10000).toFixed(2);
-  document.getElementById('ni_life_care').value  = +(lifeCare/10000).toFixed(2);
-  document.getElementById('ni_life_pen').value   = +(lifePen/10000).toFixed(2);
-  document.getElementById('ni_furusato').value   = +(furusato/10000).toFixed(2);
+  // 数値inputとスライダーの表示を同期（フォーカス中は上書きしない）
+  setNI('ni_med_exp',   +(medExp/10000).toFixed(1));
+  setNI('ni_life_gen',  +(lifeGen/10000).toFixed(1));
+  setNI('ni_life_care', +(lifeCare/10000).toFixed(1));
+  setNI('ni_life_pen',  +(lifePen/10000).toFixed(1));
+  setNI('ni_furusato',  +(furusato/10000).toFixed(1));
   document.getElementById('n_med').textContent =
     '控除額 = '+Yen(medDed)+'　（閾値: min(総所得×5%, 10万)＝'+Yen(medThreshold)+'）';
   document.getElementById('n_furusato').textContent =
@@ -672,38 +765,35 @@ function update(){
   document.getElementById('d_furusato_ded').textContent  = Yen(furusatoDed);
   document.getElementById('d_other_ded').textContent     = Yen(otherTotal);
 
-  var sal  = +document.getElementById('salary').value;
-  var rev  = +document.getElementById('biz_rev').value;
-  var rate = +document.getElementById('exp_rate').value;
-  // 数値inputを最新スライダー値に同期
-  document.getElementById('ni_salary').value   = +(sal/10000).toFixed(0);
-  document.getElementById('ni_biz_rev').value  = +(rev/10000).toFixed(1);
-  document.getElementById('ni_exp_rate').value = rate;
-  var rev  = +document.getElementById('biz_rev').value;
-  var rate = +document.getElementById('exp_rate').value;
-  var r    = calc(sal, rev, rate, blueAmt);
+  var sal   = +document.getElementById('salary').value;
+  var rev   = +document.getElementById('biz_rev').value;
+  var cogs  = +document.getElementById('biz_cogs').value;
+  var opex  = +document.getElementById('biz_opex').value;
+  var expAbs= Math.min(cogs + opex, rev); // 経費合計（売上を超えないように）
+  // スライダーと数値inputを同期（フォーカス中は上書きしない）
+  setNI('ni_salary',    +(sal/10000).toFixed(0));
+  setNI('ni_biz_rev',   +(rev/10000).toFixed(1));
+  setNI('ni_biz_cogs',  +(cogs/10000).toFixed(1));
+  setNI('ni_biz_opex',  +(opex/10000).toFixed(1));
+  var r    = calc(sal, rev, expAbs, blueAmt);
   var s    = calcSalOnly(sal);          // 給与のみ
   var addTax  = r.total - s.total;
   var bizNet  = r.profit - Math.max(0, addTax);
   var effRate = r.profit > 0 ? Math.max(0, addTax) / r.profit : 0;
 
   // ── 手取り計算
-  // 給与手取り＝給与収入 ー 社保 ー 給与のみ時の税額（所得税+住民税）
   var salTakeHome   = sal - r.si - s.it - s.rt;
-  // 事業手取り＝事業利益 ー 追加税負担（給与のみ比）
   var bizTakeHome   = bizNet;
-  // 総手取り
   var totalTakeHome = salTakeHome + bizTakeHome;
-  // 給与のみの手取り（比較用）
   var salOnlyTakeHome = sal - s.si - s.it - s.rt;
 
   // ── 給与スライダー表示
   document.getElementById('n_sal').textContent =
-    '給与所得控除: △'+Yen(r.ed)+'　社会保険料（自動）: '+Yen(r.si);
+    '給与所得控除: △'+Yen(r.ed)+'　社会保険料'+(siMode==='manual'?'（手動）':'（自動）')+': '+Yen(r.si);
   document.getElementById('n_rev').textContent =
-    '必要経費: '+M(r.exp)+'　事業利益: '+M(r.profit)+'　青色控除適用: '+M(r.blueApp);
+    '売上原価: '+M(cogs)+'　必要経費: '+M(opex)+'　経費合計: '+M(expAbs)+'　事業利益: '+M(r.profit);
   document.getElementById('n_exp').textContent =
-    '経費後利益: '+M(r.profit)+' → 青色控除後 事業所得: '+M(r.bizInc);
+    '青色控除適用: '+M(r.blueApp)+'　→ 事業所得: '+M(r.bizInc);
 
   // ── 動的表示ボックス
   document.getElementById('d_sal_rev').textContent = Yen(sal);
@@ -715,9 +805,14 @@ function update(){
   document.getElementById('d_sal_rt').textContent  = Yen(s.rt);
   document.getElementById('d_sal_tt').textContent  = Yen(Math.round(s.total));
 
-  // ── アラート
-  document.getElementById('ab_shohi').className = 'ab'+(rev >= 10000000?' show':'');
+  // ── アラート（消費税アラートは削除・個人事業税のみ）
   document.getElementById('ab_jigyo').className = 'ab'+(r.profit > 2900000?' show':'');
+
+  // ── 消費税計算
+  var ct = calcConsumptionTax(rev, expAbs);
+  // 事業所得の計算：税込売上から消費税分を除いた実質利益を使う
+  // ただし所得税の課税対象事業所得は消費税納付前の利益で計算（税務上）
+  // 手取りの計算時のみ消費税を控除する
 
   // ── バッジ
   var bs = [];
@@ -725,25 +820,34 @@ function update(){
   if(r.profit > 0 && r.profit <= blueAmt)          bs.push(['tg','青色控除で事業所得ゼロ可']);
   if(r.profit > blueAmt && r.profit < 2900000)     bs.push(['ty','事業税は非課税ゾーン']);
   if(r.profit >= 2900000)                          bs.push(['tr','個人事業税 発生（290万超）']);
-  if(rev >= 10000000)                              bs.push(['tr','消費税 要検討（1,000万超）']);
-  if(rev > 0 && rev < 10000000)                    bs.push(['tg','消費税免税事業者']);
   if(r.mg >= 0.20)                                 bs.push(['ty','限界税率 '+P(r.mg+0.1)+'（所得税+住民税）']);
+  bs.push(['ty','課税事業者（消費税 '+M(ct)+' 納付）']);
   document.getElementById('tbr').innerHTML = bs.map(function(b){
     return '<span class="tb '+b[0]+'">'+b[1]+'</span>';
   }).join('');
 
   // ── ★ 手取りKPI（最上段）
+  // 事業手取り = 事業利益 ー 追加税負担 ー 消費税納付額
+  var bizTakeHomeAfterCT = bizTakeHome - ct;
+  var totalTakeHomeAfterCT = salTakeHome + bizTakeHomeAfterCT;
+  var salOnlyTakeHomeAfterCT = salOnlyTakeHome; // 給与のみは消費税なし
+
   document.getElementById('k_th_sal').textContent   = M(salTakeHome);
   document.getElementById('k_th_sal_s').textContent =
     '社保'+M(r.si)+' ＋ 税'+M(s.it+s.rt);
-  document.getElementById('k_th_biz').textContent   = M(bizTakeHome);
+  document.getElementById('k_th_biz').textContent   = M(bizTakeHomeAfterCT);
   document.getElementById('k_th_biz_s').textContent =
-    r.profit > 0 ? '利益'+M(r.profit)+' ー 追加税'+M(Math.max(0,addTax)) : '事業利益ゼロ';
-  document.getElementById('k_th_total').textContent = M(totalTakeHome);
-  var thDiff = totalTakeHome - salOnlyTakeHome;
+    r.profit > 0 ? '利益'+M(r.profit)+' ー 税'+M(Math.max(0,addTax))+' ー 消費税'+M(ct) : '事業利益ゼロ';
+  document.getElementById('k_th_total').textContent = M(totalTakeHomeAfterCT);
+  var thDiff = totalTakeHomeAfterCT - salOnlyTakeHomeAfterCT;
   document.getElementById('k_th_diff').innerHTML =
     '給与のみ手取り比 <span style="color:'+(thDiff>=0?'var(--green)':'var(--red)')+'">'+
     (thDiff>=0?'+':'')+M(thDiff)+'</span>';
+
+  // ── 消費税KPI
+  document.getElementById('k_ct').textContent = M(ct);
+  var ctRateDisp = rev > 0 ? (ct / rev * 100).toFixed(1) : '0.0';
+  document.getElementById('k_ct_s').textContent = '原則課税・売上比 '+ctRateDisp+'%';
 
   // ── KPI
   document.getElementById('k_profit').textContent   = M(r.profit);
@@ -784,9 +888,9 @@ function update(){
   btBizEl.style.color = r.bt>0?'var(--purple)':'var(--muted)';
   document.getElementById('c_tt_sal').textContent = M(s.total);
   document.getElementById('c_tt_biz').textContent = M(r.total);
-  // 手取り行
-  document.getElementById('c_th_sal').textContent = M(salOnlyTakeHome);
-  document.getElementById('c_th_biz').textContent = M(totalTakeHome);
+  // 手取り行（消費税控除後）
+  document.getElementById('c_th_sal').textContent = M(salOnlyTakeHomeAfterCT);
+  document.getElementById('c_th_biz').textContent = M(totalTakeHomeAfterCT);
   var diffEl = document.getElementById('c_diff_tax');
   diffEl.textContent = (addTax>=0?'+':'')+M(addTax);
   diffEl.style.color = addTax>0?'var(--red)':'var(--green)';
@@ -798,10 +902,10 @@ function update(){
 
   // ── アクティブグラフ再描画
   var active = document.querySelector('.pane.show').id.replace('pane_','');
-  drawChart(active, sal, rev, rate);
-  // 法人化パネルの数値inputを最新スライダー値に同期
-  document.getElementById('ni_exec_sal').value  = +(+document.getElementById('exec_sal').value/10000).toFixed(0);
-  document.getElementById('ni_corp_cost').value = +(+document.getElementById('corp_cost').value/10000).toFixed(0);
+  drawChart(active, sal, rev, expAbs);
+  // 法人化パネルの数値inputを最新スライダー値に同期（フォーカス中は上書きしない）
+  setNI('ni_exec_sal',  +(+document.getElementById('exec_sal').value/10000).toFixed(0));
+  setNI('ni_corp_cost', +(+document.getElementById('corp_cost').value/10000).toFixed(0));
 }
 
 // ══════════════════════════════════════════════
@@ -809,9 +913,9 @@ function update(){
 // ══════════════════════════════════════════════
 
 // グラフ0：給与のみ vs 給与+事業 比較（棒グラフ）
-function drawCompare(sal, rev, rate){
+function drawCompare(sal, rev, expAbs){
   dc('compare');
-  var r = calc(sal, rev, rate, blueAmt);
+  var r = calc(sal, rev, expAbs, blueAmt);
   var s = calcSalOnly(sal);
   charts.compare = new Chart(document.getElementById('chart_compare'),{
     type:'bar',
@@ -831,7 +935,7 @@ function drawCompare(sal, rev, rate){
       plugins:{
         legend:{labels:{color:'#9ca3af',font:{size:12}}},
         title:{display:true,
-          text:'給与のみ vs 給与＋事業（売上'+M(rev)+'、経費率'+rate+'%）',
+          text:'給与のみ vs 給与＋事業（売上'+M(rev)+'、経費'+M(expAbs)+'）',
           color:'#6b7280',font:{size:11}},
         tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+M(c.raw);}}}
       },
@@ -844,7 +948,7 @@ function drawCompare(sal, rev, rate){
 }
 
 // グラフ1：利益別 税額内訳
-function drawProfit(sal, rev, rate){
+function drawProfit(sal, rev, expAbs){
   dc('profit');
   var maxP = Math.max(rev>0?rev:3000000, 1000000);
   var steps = 24;
@@ -879,42 +983,49 @@ function drawProfit(sal, rev, rate){
   });
 }
 
-// グラフ2：経費率の影響
+// グラフ2：経費額の影響（経費を0〜売上まで変化させる）
 function drawExpense(sal, rev){
   dc('expense');
   var s = calcSalOnly(sal);
+  var steps = 20;
   var rows=[];
-  for(var r=0;r<=95;r+=5){
-    var c = calc(sal, rev, r, blueAmt);
+  for(var i=0;i<=steps;i++){
+    var expA = Math.round(rev * i / steps);
+    var c = calc(sal, rev, expA, blueAmt);
     var add = Math.max(0, c.total-s.total);
-    rows.push({r:r, profit:c.profit, add:add, net:c.profit-add});
+    rows.push({exp:expA, profit:c.profit, add:add, net:c.profit-add});
   }
   charts.expense = new Chart(document.getElementById('chart_expense'),{
     type:'line',
-    data:{labels:rows.map(function(r){return r.r+'%';}),datasets:[
-      {label:'事業手取り', data:rows.map(function(r){return r.net;}),  borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.3, pointRadius:3},
-      {label:'追加税負担', data:rows.map(function(r){return r.add;}),  borderColor:'#f87171', fill:false, tension:.3, pointRadius:3},
-      {label:'事業利益',   data:rows.map(function(r){return r.profit;}),borderColor:'#60a5fa', borderDash:[5,5], fill:false, tension:.3, pointRadius:1},
+    data:{labels:rows.map(function(r){return M(r.exp);}),datasets:[
+      {label:'事業手取り', data:rows.map(function(r){return r.net;}),    borderColor:'#4ade80', backgroundColor:'#4ade8015', fill:true,  tension:.3, pointRadius:2},
+      {label:'追加税負担', data:rows.map(function(r){return r.add;}),    borderColor:'#f87171', fill:false, tension:.3, pointRadius:2},
+      {label:'事業利益',   data:rows.map(function(r){return r.profit;}), borderColor:'#60a5fa', borderDash:[5,5], fill:false, tension:.3, pointRadius:1},
     ]},
     options:{responsive:true,
       plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
-        title:{display:true,text:'経費率0〜95%の影響（売上'+M(rev)+'、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
-      scales:{x:{grid:GRID,ticks:TICK},y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}}}
+        title:{display:true,text:'経費額の影響（売上'+M(rev)+'、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
+      scales:{x:{grid:GRID,ticks:Object.assign({},TICK,{maxTicksLimit:8})},y:{grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})}}}
   });
 }
 
-// グラフ3：売上別シミュレーション
-function drawRev(sal, expRate){
+// グラフ3：売上別シミュレーション（現在の経費率を維持して売上を変化）
+function drawRev(sal, expAbs, currentRev){
   dc('rev');
   var s = calcSalOnly(sal);
+  // 現在の経費率を算出して各売上に比例適用
+  var expRatio = currentRev > 0 ? expAbs / currentRev : 0;
   var revs=[0,100,200,300,500,700,1000,1500,2000,3000,4000,5000,7000,10000];
   var rows=revs.map(function(rv){
-    var c = calc(sal, rv*10000, expRate, blueAmt);
+    var revVal = rv*10000;
+    var expVal = Math.round(revVal * expRatio);
+    var c = calc(sal, revVal, expVal, blueAmt);
     var add = Math.max(0, c.total-s.total);
     return {lbl:rv===0?'0万':rv+'万',
       itAdd:Math.max(0,c.it-s.it), rtAdd:Math.max(0,c.rt-s.rt),
       bt:c.bt, net:c.profit-add, eff:+(add>0&&c.profit>0?add/c.profit*100:0).toFixed(1)};
   });
+  var expPct = currentRev > 0 ? Math.round(expRatio*100) : 0;
   charts.rev = new Chart(document.getElementById('chart_rev'),{
     type:'bar',
     data:{labels:rows.map(function(r){return r.lbl;}),datasets:[
@@ -926,7 +1037,7 @@ function drawRev(sal, expRate){
     ]},
     options:{responsive:true,
       plugins:{legend:{labels:{color:'#9ca3af',font:{size:11}}},
-        title:{display:true,text:'売上別 税額・手取り（経費率'+expRate+'%、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
+        title:{display:true,text:'売上別 税額・手取り（経費率'+expPct+'%固定、給与'+M(sal)+'）',color:'#6b7280',font:{size:11}}},
       scales:{
         x:{grid:GRID,ticks:TICK},
         y:{stacked:true,grid:GRID,ticks:Object.assign({},TICK,{callback:TFMT})},
@@ -968,13 +1079,13 @@ function drawMargin(sal){
   });
 }
 
-function drawChart(tab, sal, rev, rate){
-  if(tab==='compare') drawCompare(sal, rev, rate);
-  if(tab==='profit')  drawProfit(sal, rev, rate);
+function drawChart(tab, sal, rev, expAbs){
+  if(tab==='compare') drawCompare(sal, rev, expAbs);
+  if(tab==='profit')  drawProfit(sal, rev, expAbs);
   if(tab==='expense') drawExpense(sal, rev);
-  if(tab==='rev')     drawRev(sal, rate);
+  if(tab==='rev')     drawRev(sal, expAbs, rev);
   if(tab==='margin')  drawMargin(sal);
-  if(tab==='corp')    drawCorp(sal, rev, rate);
+  if(tab==='corp')    drawCorp(sal, rev, expAbs);
 }
 
 // ══════════════════════════════════════════════
@@ -1054,15 +1165,17 @@ function setCst(name, btn){
     document.getElementById(id).className='tgb';
   });
   btn.className='tgb on';
-  var sal  = +document.getElementById('salary').value;
-  var rev  = +document.getElementById('biz_rev').value;
-  var rate = +document.getElementById('exp_rate').value;
-  drawCorp(sal, rev, rate);
+  var sal   = +document.getElementById('salary').value;
+  var rev   = +document.getElementById('biz_rev').value;
+  var cogs  = +document.getElementById('biz_cogs').value;
+  var opex  = +document.getElementById('biz_opex').value;
+  var expAbs= Math.min(cogs+opex, rev);
+  drawCorp(sal, rev, expAbs);
 }
 
 // 法人化パネル全体描画
-function drawCorp(sal, rev, rate){
-  var r       = calc(sal, rev, rate, blueAmt);
+function drawCorp(sal, rev, expAbs){
+  var r       = calc(sal, rev, expAbs, blueAmt);
   var s       = calcSalOnly(sal);
   var execSal = +document.getElementById('exec_sal').value;
   var corpCost= +document.getElementById('corp_cost').value;
@@ -1237,6 +1350,16 @@ function drawCorpCompare(sal, bizProfit, execSal, corpCost, soleTakeHome, co){
 }
 
 // ── トグル・タブ切替
+// 売上原価・必要経費の入力変更時にスライダーも同期してupdateを呼ぶ
+function updateExpAbs(){
+  var cogs = parseFloat(document.getElementById('ni_biz_cogs').value)||0;
+  var opex = parseFloat(document.getElementById('ni_biz_opex').value)||0;
+  var rev  = +document.getElementById('biz_rev').value;
+  document.getElementById('biz_cogs').value = Math.round(cogs*10000/1000)*1000;
+  document.getElementById('biz_opex').value = Math.round(opex*10000/1000)*1000;
+  update();
+}
+
 function setBlue(v){
   blueAmt = v===65?650000:v===10?100000:0;
   ['bl65','bl10','bl0'].forEach(function(id){ document.getElementById(id).className='tgb'; });
@@ -1248,10 +1371,12 @@ function switchTab(name,btn){
   document.querySelectorAll('.tabb').forEach(function(b){ b.className='tabb'; });
   document.getElementById('pane_'+name).className='pane show';
   btn.className='tabb on';
-  var sal  = +document.getElementById('salary').value;
-  var rev  = +document.getElementById('biz_rev').value;
-  var rate = +document.getElementById('exp_rate').value;
-  drawChart(name, sal, rev, rate);
+  var sal   = +document.getElementById('salary').value;
+  var rev   = +document.getElementById('biz_rev').value;
+  var cogs  = +document.getElementById('biz_cogs').value;
+  var opex  = +document.getElementById('biz_opex').value;
+  var expAbs= Math.min(cogs+opex, rev);
+  drawChart(name, sal, rev, expAbs);
 }
 
 // ── 初期化
